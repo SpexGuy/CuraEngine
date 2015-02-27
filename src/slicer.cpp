@@ -316,7 +316,7 @@ Slicer::Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool kee
     }
     
     for(unsigned int i=0; i<ov->faces.size(); i++)
-    {
+        {
         Point3 p0 = ov->points[ov->faces[i].index[0]].p;
         Point3 p1 = ov->points[ov->faces[i].index[1]].p;
         Point3 p2 = ov->points[ov->faces[i].index[2]].p;
@@ -357,6 +357,10 @@ Slicer::Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool kee
             layers[layerNr].faceToSegmentIndex[i] = layers[layerNr].segmentList.size();
             s.faceIndex = i;
             s.addedToPolygon = false;
+            // Copy color from optimized face to the segment points
+            // TODO: This wont really work...
+            s.start.color = ov->faces[i].color;
+            s.end.color = ov->faces[i].color;
             layers[layerNr].segmentList.push_back(s);
         }
     }
@@ -367,6 +371,7 @@ Slicer::Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool kee
     }
 }
 
+// TODO: Color the segments for debug
 void Slicer::dumpSegmentsToHTML(const char* filename)
 {
     float scale = std::max(modelSize.x, modelSize.y) / 1500;

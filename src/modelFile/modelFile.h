@@ -11,6 +11,8 @@ The format returned is a Model class with an array of faces, which have integer 
 using std::vector;
 #include "../utils/intpoint.h"
 #include "../utils/floatpoint.h"
+#include "../color.h"
+using cura::Color;
 
 extern FILE* binaryMeshBlob;
 
@@ -22,8 +24,11 @@ class SimpleFace
 {
 public:
     Point3 v[3];
+    Color color;
 
-    SimpleFace(Point3& v0, Point3& v1, Point3& v2) { v[0] = v0; v[1] = v1; v[2] = v2; }
+    SimpleFace(Point3& v0, Point3& v1, Point3& v2, Color& c) : color(c) { v[0] = v0; v[1] = v1; v[2] = v2;}
+    
+    SimpleFace(Point3& v0, Point3& v1, Point3& v2) : color(0, 0, 0) { v[0] = v0; v[1] = v1; v[2] = v2;}
 };
 
 /* A SimpleVolume is the most basic reprisentation of a 3D model. It contains all the faces as SimpleTriangles, with nothing fancy. */
@@ -35,6 +40,11 @@ public:
     void addFace(Point3& v0, Point3& v1, Point3& v2)
     {
         faces.push_back(SimpleFace(v0, v1, v2));
+    }
+
+    void addColorFace(Point3& v0, Point3& v1, Point3& v2, Color color)
+    {
+        faces.push_back(SimpleFace(v0, v1, v2, color));
     }
 
     Point3 min()

@@ -11,6 +11,7 @@ class OptimizedFace
 public:
     int index[3];
     int touching[3];
+    Color color;
 };
 class OptimizedPoint3
 {

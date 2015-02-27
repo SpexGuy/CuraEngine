@@ -64,6 +64,8 @@ OptimizedVolume::OptimizedVolume(SimpleVolume* volume, OptimizedModel* model)
             points[f.index[0]].faceIndexList.push_back(faces.size());
             points[f.index[1]].faceIndexList.push_back(faces.size());
             points[f.index[2]].faceIndexList.push_back(faces.size());
+            // Copy color to optimized face
+            f.color = volume->faces[i].color;
             faces.push_back(f);
             //}
         }

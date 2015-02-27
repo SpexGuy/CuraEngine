@@ -102,12 +102,21 @@ SimpleModel* loadModelSTL_binary(SimpleModel *m,const char* filename, FMatrix3x3
         Point3 v0 = matrix.apply(FPoint3(v[0], v[1], v[2]));
         Point3 v1 = matrix.apply(FPoint3(v[3], v[4], v[5]));
         Point3 v2 = matrix.apply(FPoint3(v[6], v[7], v[8]));
-        vol->addFace(v0, v1, v2);
         if (fread(buffer, sizeof(uint16_t), 1, f) != 1)
         {
             fclose(f);
             return nullptr;
+        } else {
+            short temp = *(short*) buffer;
+            if(temp & 0x8000) {
+                char b = (char) (temp  & 0x001F);
+                char g = (char) ((temp & 0x03E0) >> 5);
+                char r = (char) ((temp & 0x7C00) >> 10);
+                Color color(r, g ,b);
+                vol->addFace(v0, v1, v2, color);
+            }
         }
+        vol->addFace(v0, v1, v2);
     }
     fclose(f);
     return m;

@@ -384,21 +384,18 @@ void Slicer::dumpSegmentsToHTML(const char* filename)
         fprintf(f, "<path d='M 0 0 L 10 5 M 0 10 L 10 5'/>");
         fprintf(f, "</marker>");
         fprintf(f, "<g fill-rule='evenodd' style=\"fill: gray; stroke:black;stroke-width:1\">\n");
-        fprintf(f, "<path marker-mid='url(#MidMarker)' d=\"");
         for(unsigned int j=0; j<layers[i].polygonList.size(); j++)
         {
             PolygonRef p = layers[i].polygonList[j];
             for(unsigned int n=0; n<p.size(); n++)
             {
-                if (n == 0)
-                    fprintf(f, "M");
-                else
-                    fprintf(f, "L");
-                fprintf(f, "%f,%f ", float(p[n].X - modelMin.x)/scale, float(p[n].Y - modelMin.y)/scale);
+                Color& color = *reinterpret_cast<Color*>(p[n].Z);
+                fprintf(f, "<path marker-mid='url(#MidMarker)' stroke=\"#%2x%2x%2x\" d=\"", int(color.r*255), int(color.g*255), int(color.b*255));
+                fprintf(f, "M %f,%f L %f,%f ", float(p[n].X - modelMin.x)/scale, float(p[n].Y - modelMin.y)/scale, float(p[(n+1) % p.size()].X - modelMin.x)/scale, float(p[(n+1) % p.size()].Y - modelMin.y)/scale);
+                fprintf(f, "\"/>");
             }
             fprintf(f, "Z\n");
         }
-        fprintf(f, "\"/>");
         fprintf(f, "</g>\n");
         for(unsigned int j=0; j<layers[i].openPolygons.size(); j++)
         {

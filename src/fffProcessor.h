@@ -226,7 +226,7 @@ private:
         
         //carveMultipleVolumes(storage.volumes);
         generateMultipleVolumesOverlap(storage.volumes, config.multiVolumeOverlap);
-        //dumpLayerparts(storage, "c:/models/output.html");
+        dumpLayerparts(storage, "./output.html");
         if (config.simpleMode)
         {
             for(unsigned int layerNr=0; layerNr<totalLayers; layerNr++)

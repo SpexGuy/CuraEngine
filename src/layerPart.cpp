@@ -87,7 +87,29 @@ void dumpLayerparts(SliceDataStorage& storage, const char* filename)
                         fprintf(out, "\" style=\"fill:red; stroke:black;stroke-width:1\" />\n");
                 }
             }
-            fprintf(out, "</svg>\n");
+            fprintf(out, "<marker id='MidMarker' viewBox='0 0 10 10' refX='5' refY='5' markerUnits='strokeWidth' markerWidth='10' markerHeight='10' stroke='lightblue' stroke-width='2' fill='none' orient='auto'>");
+            fprintf(out, "<path d='M 0 0 L 10 5 M 0 10 L 10 5'/>");
+            fprintf(out, "</marker>");
+            fprintf(out, "<g fill-rule='evenodd' style=\"fill: gray; stroke:black;stroke-width:1\">\n");
+            for(unsigned int i=0;i<layer->parts.size();i++)
+            {
+                SliceLayerPart* part = &layer->parts[i];
+                for(unsigned int j=0;j<part->outline.size();j++)
+                {
+                    for(unsigned int k=0;k<part->outline[j].size();k++) {
+                        const PolygonRef& p = part->outline[j];
+                        Color& color = *reinterpret_cast<Color*>(p[k].Z);
+                        fprintf(out, "<path marker-mid='url(#MidMarker)' stroke=\"#%2x%2x%2x\" d=\"", int(color.r*255), int(color.g*255), int(color.b*255));
+                        fprintf(out, "M %f,%f L %f,%f ", float(p[k].X - modelMin.x)/modelSize.x*500, float(p[k].Y - modelMin.y)/modelSize.y*500, float(p[(k+1) % p.size()].X - modelMin.x)/modelSize.x*500, float(p[(k+1) % p.size()].Y - modelMin.y)/modelSize.y*500);
+                        fprintf(out, "\"/>");
+                    }
+                    if (j == 0)
+                        fprintf(out, "\" style=\"fill:gray; stroke:black;stroke-width:1\" />\n");
+                    else
+                        fprintf(out, "\" style=\"fill:red; stroke:black;stroke-width:1\" />\n");
+                }
+            }
+            fprintf(out, "</g></svg>\n");
         }
     }
     fprintf(out, "</body></html>");

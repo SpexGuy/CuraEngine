@@ -106,17 +106,18 @@ SimpleModel* loadModelSTL_binary(SimpleModel *m,const char* filename, FMatrix3x3
         {
             fclose(f);
             return nullptr;
+        } 
+        short temp = *(short*) buffer;
+        if(temp & 0x8000) {
+            char b = (char) (temp  & 0x001F);
+            char g = (char) ((temp & 0x03E0) >> 5);
+            char r = (char) ((temp & 0x7C00) >> 10);
+            Color color(r, g ,b);
+            vol->addColorFace(v0, v1, v2, color);
+        
         } else {
-            short temp = *(short*) buffer;
-            if(temp & 0x8000) {
-                char b = (char) (temp  & 0x001F);
-                char g = (char) ((temp & 0x03E0) >> 5);
-                char r = (char) ((temp & 0x7C00) >> 10);
-                Color color(r, g ,b);
-                vol->addFace(v0, v1, v2, color);
-            }
+            vol->addFace(v0, v1, v2);
         }
-        vol->addFace(v0, v1, v2);
     }
     fclose(f);
     return m;

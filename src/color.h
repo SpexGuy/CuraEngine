@@ -2,6 +2,8 @@
 #ifndef COLOR_H
 #define COLOR_H
 
+#include "../libs/clipper/clipper.hpp"
+
 namespace cura {
 
 class Color
@@ -15,6 +17,8 @@ public:
     Color(float red, float green, float blue) : r(red), g(green), b(blue) {}
 
 };
+
+void flatColorCallback(ClipperLib::IntPoint& z1, ClipperLib::IntPoint& z2, ClipperLib::IntPoint& pt);
 
 }//namespace cura
 

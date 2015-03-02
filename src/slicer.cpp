@@ -358,9 +358,9 @@ Slicer::Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool kee
             s.faceIndex = i;
             s.addedToPolygon = false;
             // Copy color from optimized face to the segment points
-            // TODO: This wont really work...
-            s.start.color = ov->faces[i].color;
-            s.end.color = ov->faces[i].color;
+            // TODO: Make sure OV lasts longer than four hours
+            s.start.Z = reinterpret_cast<ClipperLib::cInt>(&ov->faces[i].color);
+            s.end.Z = reinterpret_cast<ClipperLib::cInt>(&ov->faces[i].color);
             layers[layerNr].segmentList.push_back(s);
         }
     }

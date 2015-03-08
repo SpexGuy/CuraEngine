@@ -160,7 +160,7 @@ int main(int argc, char **argv)
                             processor.processFile(files);
                         files.clear();
                     }catch(...){
-                        cura::logError("Unknown exception\n");
+                        cura::logError("Unknown exception 1\n");
                         exit(1);
                     }
                     break;
@@ -179,7 +179,7 @@ int main(int argc, char **argv)
                     tmp.push_back(argv[argn]);
                     processor.processFile(tmp);
                 }catch(...){
-                    cura::logError("Unknown exception\n");
+                    cura::logError("Unknown exception 2\n");
                     exit(1);
                 }
             }else{
@@ -193,7 +193,7 @@ int main(int argc, char **argv)
         if (files.size() > 0)
             processor.processFile(files);
     }catch(...){
-        cura::logError("Unknown exception\n");
+        cura::logError("Unknown exception 3\n");
         exit(1);
     }
     //Finalize the processor, this adds the end.gcode. And reports statistics.

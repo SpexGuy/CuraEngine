@@ -48,6 +48,8 @@ private:
 	const ColorIterator& createColor(const Color &c);
 };
 
+void flatColorCallback(ClipperLib::IntPoint& z1, ClipperLib::IntPoint& z2, ClipperLib::IntPoint& pt);
+
 }//namespace cura
 
 #endif//COLOR_H

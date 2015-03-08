@@ -21,31 +21,31 @@ public:
 void flatColorCallback(ClipperLib::IntPoint& z1, ClipperLib::IntPoint& z2, ClipperLib::IntPoint& pt);
 
 struct ColorComparator {
-	bool operator() (const Color& self, const Color& other) {
-    	if (self.r != other.r)
-    		return r < other.r;
-    	if (self.g != other.g)
-    		return g < other.g;
-    	if (self.b != other.b)
-    		return b < other.b;
-    	return false;
-	}
+    bool operator() (const Color& self, const Color& other) {
+        if (self.r != other.r)
+            return self.r < other.r;
+        if (self.g != other.g)
+            return self.g < other.g;
+        if (self.b != other.b)
+            return self.b < other.b;
+        return false;
+    }
 };
 
 class ColorCache
 {
 public:
-	static ColorCache& inst();
-	const Color* getColor(const float r, const float g, const float b);
+    static ColorCache& inst();
+    const Color* getColor(const float r, const float g, const float b);
 
 private:
-	typedef std::set<Color, ColorComparator> ColorSet;
-	typedef ColorSet::iterator ColorIterator;
-	
-	static ColorCache instance;
+    typedef std::set<Color, ColorComparator> ColorSet;
+    typedef ColorSet::iterator ColorIterator;
+    
+    static ColorCache instance;
 
-	ColorSet cache;
-	const ColorIterator& createColor(const Color &c);
+    ColorSet cache;
+    const ColorIterator createColor(const Color &c);
 };
 
 void flatColorCallback(ClipperLib::IntPoint& z1, ClipperLib::IntPoint& z2, ClipperLib::IntPoint& pt);

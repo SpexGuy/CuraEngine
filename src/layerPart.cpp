@@ -26,6 +26,7 @@ void createLayerWithParts(SliceLayer& storageLayer, SlicerLayer* layer, int unio
     {
         for(unsigned int i=0; i<layer->polygonList.size(); i++)
         {
+            // TODO: Does reverse() screw us over?
             if (layer->polygonList[i].orientation())
                 layer->polygonList[i].reverse();
         }
@@ -98,7 +99,7 @@ void dumpLayerparts(SliceDataStorage& storage, const char* filename)
                 {
                     for(unsigned int k=0;k<part->outline[j].size();k++) {
                         const PolygonRef& p = part->outline[j];
-                        Color& color = *reinterpret_cast<Color*>(p[k].Z);
+                        const Color& color = *reinterpret_cast<const Color*>(p[k].Z);
                         fprintf(out, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(color.r*255), int(color.g*255), int(color.b*255));
                         fprintf(out, "M %f,%f L %f,%f ", float(p[k].X - modelMin.x)/modelSize.x*500, float(p[k].Y - modelMin.y)/modelSize.y*500, float(p[(k+1) % p.size()].X - modelMin.x)/modelSize.x*500, float(p[(k+1) % p.size()].Y - modelMin.y)/modelSize.y*500);
                         fprintf(out, "\"/>");

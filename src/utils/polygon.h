@@ -37,7 +37,7 @@ public:
         return polygon->size();
     }
 
-    Point operator[] (unsigned int index) const
+    Point& operator[] (unsigned int index) const
     {
         POLY_ASSERT(index < size());
         return (*polygon)[index];

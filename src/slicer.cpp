@@ -15,6 +15,7 @@ void SlicerLayer::makePolygons(OptimizedVolume* ov, bool keepNoneClosed, bool ex
     
     for(unsigned int startSegment=0; startSegment < segmentList.size(); startSegment++)
     {
+        ClipperLib::cInt color;
         if (segmentList[startSegment].addedToPolygon)
             continue;
         
@@ -40,7 +41,10 @@ void SlicerLayer::makePolygons(OptimizedVolume* ov, bool keepNoneClosed, bool ex
                     if (shorterThen(diff, MM2INT(0.01)))
                     {
                         if (faceToSegmentIndex[face->touching[i]] == static_cast<int>(startSegment))
+                        {
                             canClose = true;
+                            color = p1.Z;
+                        }
                         if (segmentList[faceToSegmentIndex[face->touching[i]]].addedToPolygon)
                             continue;
                         nextIndex = faceToSegmentIndex[face->touching[i]];
@@ -51,10 +55,13 @@ void SlicerLayer::makePolygons(OptimizedVolume* ov, bool keepNoneClosed, bool ex
                 break;
             segmentIndex = nextIndex;
         }
-        if (canClose)
+        if (canClose) 
+        {
+            poly[0].Z = color;
             polygonList.add(poly);
-        else
+        }else{
             openPolygonList.add(poly);
+        }
     }
     //Clear the segmentList to save memory, it is no longer needed after this point.
     segmentList.clear();
@@ -139,14 +146,15 @@ void SlicerLayer::makePolygons(OptimizedVolume* ov, bool keepNoneClosed, bool ex
             {
                 if (openPolygonList[bestA].polygonLength() > openPolygonList[bestB].polygonLength())
                 {
-                    for(unsigned int n=openPolygonList[bestB].size()-1; int(n)>=0; n--)
-                        openPolygonList[bestA].add(openPolygonList[bestB][n]);
-                    openPolygonList[bestB].clear();
-                }else{
-                    for(unsigned int n=openPolygonList[bestA].size()-1; int(n)>=0; n--)
-                        openPolygonList[bestB].add(openPolygonList[bestA][n]);
-                    openPolygonList[bestA].clear();
+                    std::swap(bestA, bestB);
                 }
+                // Reverse color order in preperation to add to combine with reversed poly
+                for(unsigned int n=1; n<openPolygonList[bestA].size(); n++)
+                    openPolygonList[bestA][n - 1].Z = openPolygonList[bestA][n].Z;
+
+                for(unsigned int n=openPolygonList[bestA].size()-1; int(n)>=0; n--)
+                    openPolygonList[bestB].add(openPolygonList[bestA][n]);
+                openPolygonList[bestA].clear();
             }else{
                 for(unsigned int n=0; n<openPolygonList[bestB].size(); n++)
                     openPolygonList[bestA].add(openPolygonList[bestB][n]);
@@ -154,7 +162,7 @@ void SlicerLayer::makePolygons(OptimizedVolume* ov, bool keepNoneClosed, bool ex
             }
         }
     }
-
+    // TODO: Color may want this?
     if (extensiveStitching)
     {
         //For extensive stitching find 2 open polygons that are touching 2 closed polygons.
@@ -316,7 +324,7 @@ Slicer::Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool kee
     }
     
     for(unsigned int i=0; i<ov->faces.size(); i++)
-        {
+    {
         Point3 p0 = ov->points[ov->faces[i].index[0]].p;
         Point3 p1 = ov->points[ov->faces[i].index[1]].p;
         Point3 p2 = ov->points[ov->faces[i].index[2]].p;
@@ -357,21 +365,54 @@ Slicer::Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool kee
             layers[layerNr].faceToSegmentIndex[i] = layers[layerNr].segmentList.size();
             s.faceIndex = i;
             s.addedToPolygon = false;
+
             // Copy color from optimized face to the segment points
-            // TODO: Make sure OV lasts longer than four hours
-            s.start.Z = reinterpret_cast<ClipperLib::cInt>(&ov->faces[i].color);
-            s.end.Z = reinterpret_cast<ClipperLib::cInt>(&ov->faces[i].color);
+            s.start.Z = reinterpret_cast<ClipperLib::cInt>(ov->faces[i].color);
+            s.end.Z = reinterpret_cast<ClipperLib::cInt>(ov->faces[i].color);
+            printf("color* start: %p  end: %p[r %0.3f  g %0.3f  b %0.3f]\n", s.start.Z, s.end.Z, ov->faces[i].color->r, ov->faces[i].color->g, ov->faces[i].color->b);
             layers[layerNr].segmentList.push_back(s);
         }
     }
     
+    dumpNonPolySegsToHtml("nonPolySlicerDump.html");
+ 
     for(unsigned int layerNr=0; layerNr<layers.size(); layerNr++)
     {
         layers[layerNr].makePolygons(ov, keepNoneClosed, extensiveStitching);
     }
+    // TODO: do we still have color?
+    //      ... yes?
+    dumpSegmentsToHTML("slicerDump.html");
 }
 
-// TODO: Color the segments for debug
+void Slicer::dumpNonPolySegsToHtml(const char* filename)
+{
+    float scale = std::max(modelSize.x, modelSize.y) / 1500;
+    FILE* f = fopen(filename, "w");
+    fprintf(f, "<!DOCTYPE html><html><body>\n");
+    for(unsigned int i=0; i<layers.size(); i++)
+    {
+        fprintf(f, "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" style='width:%ipx;height:%ipx'>\n", int(modelSize.x / scale), int(modelSize.y / scale));
+        fprintf(f, "<marker id='MidMarker' viewBox='0 0 10 10' refX='5' refY='5' markerUnits='strokeWidth' markerWidth='10' markerHeight='10' stroke='lightblue' stroke-width='2' fill='none' orient='auto'>");
+        fprintf(f, "<path d='M 0 0 L 10 5 M 0 10 L 10 5'/>");
+        fprintf(f, "</marker>");
+        fprintf(f, "<g fill-rule='evenodd' style=\"fill: gray; stroke:black;stroke-width:1\">\n");
+        for(unsigned int j=0; j<layers[i].segmentList.size(); j++)
+        {
+            SlicerSegment segment = layers[i].segmentList[j];
+            const Color& color = *reinterpret_cast<Color*>(segment.start.Z);
+            fprintf(f, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(color.r*255), int(color.g*255), int(color.b*255));
+            fprintf(f, "M %f,%f L %f,%f ", float(segment.start.X - modelMin.x)/scale, float(segment.start.Y - modelMin.y)/scale, float(segment.end.X - modelMin.x)/scale, float(segment.end.Y - modelMin.y)/scale);
+            fprintf(f, "\"/>");
+            fprintf(f, "Z\n");
+        }
+        fprintf(f, "</g>\n");
+        fprintf(f, "</svg>\n");
+    }
+    fprintf(f, "</body></html>");
+    fclose(f);
+}
+
 void Slicer::dumpSegmentsToHTML(const char* filename)
 {
     float scale = std::max(modelSize.x, modelSize.y) / 1500;
@@ -389,8 +430,8 @@ void Slicer::dumpSegmentsToHTML(const char* filename)
             PolygonRef p = layers[i].polygonList[j];
             for(unsigned int n=0; n<p.size(); n++)
             {
-                Color& color = *reinterpret_cast<Color*>(p[n].Z);
-                fprintf(f, "<path marker-mid='url(#MidMarker)' stroke=\"#%2x%2x%2x\" d=\"", int(color.r*255), int(color.g*255), int(color.b*255));
+                const Color& color = *reinterpret_cast<const Color*>(p[n].Z);
+                fprintf(f, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(color.r*255), int(color.g*255), int(color.b*255));
                 fprintf(f, "M %f,%f L %f,%f ", float(p[n].X - modelMin.x)/scale, float(p[n].Y - modelMin.y)/scale, float(p[(n+1) % p.size()].X - modelMin.x)/scale, float(p[(n+1) % p.size()].Y - modelMin.y)/scale);
                 fprintf(f, "\"/>");
             }

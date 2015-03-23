@@ -73,6 +73,7 @@ public:
         TimeKeeper timeKeeperTotal;
         SliceDataStorage storage;
         preSetup();
+        // TODO: Clipper in here...
         if (!prepareModel(storage, files))
             return false;
 
@@ -176,6 +177,9 @@ private:
             {
                 cura::logError("Object is way to big, CuraEngine bug?");
                 exit(1);
+            }
+            for(unsigned int f = 0; f < model->volumes[v].faces.size(); f++) {
+                printf("OptimizedColor: %f %f %f\n", model->volumes[v].faces[f].color->r, model->volumes[v].faces[f].color->g, model->volumes[v].faces[f].color->b);
             }
         }
         delete model;

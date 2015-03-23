@@ -27,8 +27,12 @@ void optimizePolygon(PolygonRef poly)
             int64_t d = dot(diff0, diff2);
             if (d < -99999999999999LL)
             {
-                poly.remove(i);
-                i --;
+                // Only remove points if they are not part of a color boundary
+                if (p1.Z == p2.Z)
+                {
+                    poly.remove(i);
+                    i --;
+                }
             }else{
                 p0 = p1;
             }

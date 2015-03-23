@@ -7,6 +7,8 @@
 
 namespace cura {
 
+class ColorCache;
+
 class Color
 {
 public:
@@ -14,8 +16,11 @@ public:
     float g;
     float b;
 
+private:
     Color() : r(0), g(0), b(0) {}
     Color(float red, float green, float blue) : r(red), g(green), b(blue) {}
+
+    friend class ColorCache;
 };
 
 void flatColorCallback(ClipperLib::IntPoint& z1, ClipperLib::IntPoint& z2, ClipperLib::IntPoint& pt);

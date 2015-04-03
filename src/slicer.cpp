@@ -369,7 +369,6 @@ Slicer::Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool kee
             // Copy color from optimized face to the segment points
             s.start.Z = reinterpret_cast<ClipperLib::cInt>(ov->faces[i].color);
             s.end.Z = reinterpret_cast<ClipperLib::cInt>(ov->faces[i].color);
-            printf("color* start: %p  end: %p[r %0.3f  g %0.3f  b %0.3f]\n", s.start.Z, s.end.Z, ov->faces[i].color->r, ov->faces[i].color->g, ov->faces[i].color->b);
             layers[layerNr].segmentList.push_back(s);
         }
     }

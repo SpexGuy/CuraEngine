@@ -23,8 +23,6 @@ private:
     friend class ColorCache;
 };
 
-void flatColorCallback(ClipperLib::IntPoint& z1, ClipperLib::IntPoint& z2, ClipperLib::IntPoint& pt);
-
 struct ColorComparator {
     bool operator() (const Color& self, const Color& other) {
         if (self.r != other.r)
@@ -54,6 +52,7 @@ private:
 };
 
 void flatColorCallback(ClipperLib::IntPoint& z1, ClipperLib::IntPoint& z2, ClipperLib::IntPoint& pt);
+void flatColorOffsetCallback(int step, int steps, ClipperLib::IntPoint& source, ClipperLib::IntPoint& dest);
 
 }//namespace cura
 

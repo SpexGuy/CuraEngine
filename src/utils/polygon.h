@@ -244,6 +244,7 @@ public:
     {
         Polygons ret;
         ClipperLib::Clipper clipper(clipper_init);
+        clipper.ZFillFunction(flatColorCallback);
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         clipper.AddPaths(other.polygons, ClipperLib::ptClip, true);
         clipper.Execute(ClipperLib::ctDifference, ret.polygons);
@@ -253,6 +254,7 @@ public:
     {
         Polygons ret;
         ClipperLib::Clipper clipper(clipper_init);
+        clipper.ZFillFunction(flatColorCallback);
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         clipper.AddPaths(other.polygons, ClipperLib::ptSubject, true);
         clipper.Execute(ClipperLib::ctUnion, ret.polygons, ClipperLib::pftNonZero, ClipperLib::pftNonZero);
@@ -262,6 +264,7 @@ public:
     {
         Polygons ret;
         ClipperLib::Clipper clipper(clipper_init);
+        clipper.ZFillFunction(flatColorCallback);
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         clipper.AddPaths(other.polygons, ClipperLib::ptClip, true);
         clipper.Execute(ClipperLib::ctIntersection, ret.polygons);
@@ -271,6 +274,8 @@ public:
     {
         Polygons ret;
         ClipperLib::ClipperOffset clipper;
+        clipper.ZFillFunction(flatColorCallback);
+        clipper.ZOffsetFunction(flatColorOffsetCallback);
         clipper.AddPaths(polygons, ClipperLib::jtMiter, ClipperLib::etClosedPolygon);
         clipper.MiterLimit = 2.0;
         clipper.Execute(ret.polygons, distance);
@@ -280,6 +285,7 @@ public:
     {
         vector<Polygons> ret;
         ClipperLib::Clipper clipper(clipper_init);
+        clipper.ZFillFunction(flatColorCallback);
         ClipperLib::PolyTree resultPolyTree;
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         if (unionAll)
@@ -311,6 +317,7 @@ public:
     {
         Polygons ret;
         ClipperLib::Clipper clipper(clipper_init);
+        clipper.ZFillFunction(flatColorCallback);
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         clipper.Execute(ClipperLib::ctUnion, ret.polygons);
         return ret;

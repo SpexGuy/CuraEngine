@@ -11,7 +11,7 @@
 namespace cura {
 
 GCodeExport::GCodeExport()
-: currentPosition(0,0,0), startPosition(INT32_MIN,INT32_MIN,0)
+: currentPosition(0,0,0), startPosition(INT32_MIN,INT32_MIN,0), currentColor(nullptr)
 {
     extrusionAmount = 0;
     extrusionPerMM = 0;
@@ -214,6 +214,16 @@ void GCodeExport::writeMove(Point p, int speed, int lineWidth)
 {
     if (currentPosition.x == p.X && currentPosition.y == p.Y && currentPosition.z == zPos)
         return;
+
+    Color* nextColor = reinterpret_cast<Color*>(p.Z);
+    if (nextColor != currentColor) {
+       if (nextColor) {
+            writeComment("COLOR_START %f %f %f", nextColor->r, nextColor->g, nextColor->b);
+        } else {
+            writeComment("COLOR_STOP");
+        }
+        currentColor = nextColor;
+    }
 
     if (flavor == GCODE_FLAVOR_BFB)
     {

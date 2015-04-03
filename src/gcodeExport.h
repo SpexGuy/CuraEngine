@@ -26,6 +26,7 @@ private:
     double extruderSwitchRetraction;
     double minimalExtrusionBeforeRetraction;
     double extrusionAmountAtPreviousRetraction;
+    Color* currentColor;
     Point3 currentPosition;
     Point3 startPosition;
     Point extruderOffset[MAX_EXTRUDERS];

@@ -94,10 +94,10 @@ public:
 #define POINT_MAX std::numeric_limits<ClipperLib::cInt>::max()
 
 /* Extra operators to make it easier to do math with the 64bit Point objects */
-INLINE Point operator+(const Point& p0, const Point& p1) { return Point(p0.X+p1.X, p0.Y+p1.Y); }
-INLINE Point operator-(const Point& p0, const Point& p1) { return Point(p0.X-p1.X, p0.Y-p1.Y); }
-INLINE Point operator*(const Point& p0, const int32_t i) { return Point(p0.X*i, p0.Y*i); }
-INLINE Point operator/(const Point& p0, const int32_t i) { return Point(p0.X/i, p0.Y/i); }
+INLINE Point operator+(const Point& p0, const Point& p1) { return Point(p0.X+p1.X, p0.Y+p1.Y, p0.Z); }
+INLINE Point operator-(const Point& p0, const Point& p1) { return Point(p0.X-p1.X, p0.Y-p1.Y, p0.Z); }
+INLINE Point operator*(const Point& p0, const int32_t i) { return Point(p0.X*i, p0.Y*i, p0.Z); }
+INLINE Point operator/(const Point& p0, const int32_t i) { return Point(p0.X/i, p0.Y/i, p0.Z); }
 
 //Point& operator += (const Point& p) { x += p.x; y += p.y; return *this; }
 //Point& operator -= (const Point& p) { x -= p.x; y -= p.y; return *this; }
@@ -194,12 +194,12 @@ public:
 
     Point apply(const Point p) const
     {
-        return Point(p.X * matrix[0] + p.Y * matrix[1], p.X * matrix[2] + p.Y * matrix[3]);
+        return Point(p.X * matrix[0] + p.Y * matrix[1], p.X * matrix[2] + p.Y * matrix[3], p.Z);
     }
 
     Point unapply(const Point p) const
     {
-        return Point(p.X * matrix[0] + p.Y * matrix[2], p.X * matrix[1] + p.Y * matrix[3]);
+        return Point(p.X * matrix[0] + p.Y * matrix[2], p.X * matrix[1] + p.Y * matrix[3], p.Z);
     }
 };
 

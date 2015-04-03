@@ -118,6 +118,7 @@ struct DoublePoint
 
 #ifdef use_xyz
 typedef void (*TZFillCallback)(IntPoint& z1, IntPoint& z2, IntPoint& pt);
+typedef void (*TZOffsetCallback)(int step, int steps, IntPoint& z, IntPoint& pt);
 #endif
 
 enum InitOptions {ioReverseSolution = 1, ioStrictlySimple = 2, ioPreserveCollinear = 4};
@@ -359,6 +360,10 @@ public:
   void Execute(Paths& solution, double delta);
   void Execute(PolyTree& solution, double delta);
   void Clear();
+#ifdef use_xyz
+  void ZOffsetFunction(TZOffsetCallback zOffsetFunc);
+  void ZFillFunction(TZFillCallback zFillFunc);
+#endif
   double MiterLimit;
   double ArcTolerance;
 private:
@@ -370,6 +375,10 @@ private:
   double m_miterLim, m_StepsPerRad;
   IntPoint m_lowest;
   PolyNode m_polyNodes;
+#ifdef use_xyz
+  TZOffsetCallback m_ZOffset; //custom callback 
+  TZFillCallback m_ZFill;     //see above
+#endif
 
   void FixOrientations();
   void DoOffset(double delta);
@@ -377,6 +386,7 @@ private:
   void DoSquare(int j, int k);
   void DoMiter(int j, int k, double r);
   void DoRound(int j, int k);
+  void setOffsetZ(int step, int steps, IntPoint& source, IntPoint& dest);
 };
 //------------------------------------------------------------------------------
 

@@ -94,7 +94,6 @@ SimpleModel* loadModelSTL_binary(SimpleModel *m,const char* filename, FMatrix3x3
             return nullptr;
         }
         float* normals = (float*) buffer;
-        printf("normal: %f %f %f",  normals[0], normals[1], normals[2]);
         float v[9];
         if (fread(v, sizeof(float) * 9, 1, f) != 1)
         {
@@ -111,13 +110,11 @@ SimpleModel* loadModelSTL_binary(SimpleModel *m,const char* filename, FMatrix3x3
         } 
         short temp = *(short*) buffer;
         if(temp & 0x8000) {
-            printf("%04x\n", temp);
             float b = float(temp  & 0x001F) / 31.0f;
             float g = float((temp & 0x03E0) >> 5) / 31.0f;
             float r = float((temp & 0x7C00) >> 10) / 31.0f;
             const Color* color = cura::ColorCache::inst().getColor(r, g ,b);
             vol->addColorFace(v0, v1, v2, color);
-            printf("  r %0.3f  g %0.3f  b %0.3f\n", r, g, b);
         } else {
             vol->addFace(v0, v1, v2);
         }

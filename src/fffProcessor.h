@@ -178,9 +178,6 @@ private:
                 cura::logError("Object is way to big, CuraEngine bug?");
                 exit(1);
             }
-            for(unsigned int f = 0; f < model->volumes[v].faces.size(); f++) {
-                printf("OptimizedColor: %f %f %f\n", model->volumes[v].faces[f].color->r, model->volumes[v].faces[f].color->g, model->volumes[v].faces[f].color->b);
-            }
         }
         delete model;
         cura::log("Optimize model %5.3fs \n", timeKeeper.restart());
@@ -230,7 +227,7 @@ private:
         
         //carveMultipleVolumes(storage.volumes);
         generateMultipleVolumesOverlap(storage.volumes, config.multiVolumeOverlap);
-        dumpLayerparts(storage, "./output.html");
+        //dumpLayerparts(storage, "./output.html");
         if (config.simpleMode)
         {
             for(unsigned int layerNr=0; layerNr<totalLayers; layerNr++)

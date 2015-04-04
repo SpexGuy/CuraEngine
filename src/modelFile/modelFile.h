@@ -26,7 +26,7 @@ public:
     Point3 v[3];
     const Color* color;
 
-    SimpleFace(Point3& v0, Point3& v1, Point3& v2, const Color* c) : color(c) { v[0] = v0; v[1] = v1; v[2] = v2; printf("SimpleColorFace: %f %f %f\n", c->r, c->g, c->b);}
+    SimpleFace(Point3& v0, Point3& v1, Point3& v2, const Color* c) : color(c) { v[0] = v0; v[1] = v1; v[2] = v2;}
     
     SimpleFace(Point3& v0, Point3& v1, Point3& v2) : color(nullptr) { v[0] = v0; v[1] = v1; v[2] = v2;}
 };

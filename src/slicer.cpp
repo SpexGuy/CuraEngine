@@ -373,7 +373,7 @@ Slicer::Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool kee
         }
     }
     
-    dumpNonPolySegsToHtml("nonPolySlicerDump.html");
+    //dumpNonPolySegsToHtml("nonPolySlicerDump.html");
  
     for(unsigned int layerNr=0; layerNr<layers.size(); layerNr++)
     {
@@ -381,7 +381,7 @@ Slicer::Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool kee
     }
     // TODO: do we still have color?
     //      ... yes?
-    dumpSegmentsToHTML("slicerDump.html");
+    //dumpSegmentsToHTML("slicerDump.html");
 }
 
 void Slicer::dumpNonPolySegsToHtml(const char* filename)

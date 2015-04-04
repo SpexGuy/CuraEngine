@@ -58,6 +58,8 @@ public:
             for(Point p : polygon) {
                 guiSocket.sendNr(p.X);
                 guiSocket.sendNr(p.Y);
+            }
+            for(Point p : polygon) {
                 if (!p.Z) {
                     guiSocket.sendAll(ColorCache::badColor, sizeof(Color)); 
                 } else {

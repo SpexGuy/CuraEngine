@@ -54,6 +54,11 @@ public:
             PolygonRef polygon = polygons[n];
             guiSocket.sendNr(polygon.size());
             guiSocket.sendAll(polygon.data(), polygon.size() * sizeof(Point));
+            for(Point p : polygon) {
+                guiSocket.sendNr(p.X);
+                guiSocket.sendNr(p.Y);
+                guiSocket.sendAll(reinterpret_cast<Color*>(p.Z), sizeof(Color));
+            }
         }
     }
 

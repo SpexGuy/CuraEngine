@@ -143,13 +143,21 @@ private:
                 while(vertexCount)
                 {
                     float f[3];
+                    float c[3];
                     guiSocket.recvAll(f, 3 * sizeof(float));
+                    guiSocket.recvAll(c, 3 * sizeof(float));
                     FPoint3 fp(f[0], f[1], f[2]);
                     v[pNr++] = config.matrix.apply(fp);
                     if (pNr == 3)
                     {
-                        volume->addFace(v[0], v[1], v[2]);
-                        pNr = 0;
+                        if (c[0] < 0.0f)
+                        {
+                            volume->addFace(v[0], v[1], v[2]);
+                            pNr = 0;
+                        } else {
+                            const Color* color = ColorCache::inst().getColor(c[0], c[1], c[2]);
+                            volume->addColorFace(v[0], v[1], v[2], color);
+                        }
                     }
                     vertexCount--;
                 }

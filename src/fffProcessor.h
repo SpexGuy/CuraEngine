@@ -145,11 +145,11 @@ private:
                     float f[3];
                     float c[3];
                     guiSocket.recvAll(f, 3 * sizeof(float));
-                    guiSocket.recvAll(c, 3 * sizeof(float));
                     FPoint3 fp(f[0], f[1], f[2]);
                     v[pNr++] = config.matrix.apply(fp);
                     if (pNr == 3)
                     {
+                        guiSocket.recvAll(c, 3 * sizeof(float));
                         if (c[0] < 0.0f)
                         {
                             volume->addFace(v[0], v[1], v[2]);

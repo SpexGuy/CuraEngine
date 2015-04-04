@@ -55,8 +55,8 @@ public:
             PolygonRef polygon = polygons[n];
             guiSocket.sendNr(polygon.size());
             for(Point p : polygon) {
-                guiSocket.sendNr(p.X);
-                guiSocket.sendNr(p.Y);
+                guiSocket.sendAll(&p.X, sizeof(p.X));
+                guiSocket.sendAll(&p.Y, sizeof(p.Y));
             }
             for(Point p : polygon) {
                 if (!p.Z) {

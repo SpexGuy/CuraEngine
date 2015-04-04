@@ -39,6 +39,7 @@ class ColorCache
 {
 public:
     static ColorCache& inst();
+    static const Color* badColor;
     const Color* getColor(const float r, const float g, const float b);
 
 private:

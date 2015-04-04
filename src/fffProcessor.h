@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <vector>
+#include "color.h"
 #include "utils/socket.h"
 
 #define GUI_CMD_REQUEST_MESH 0x01
@@ -57,7 +58,11 @@ public:
             for(Point p : polygon) {
                 guiSocket.sendNr(p.X);
                 guiSocket.sendNr(p.Y);
-                guiSocket.sendAll(reinterpret_cast<Color*>(p.Z), sizeof(Color));
+                if (!p.Z) {
+                    guiSocket.sendAll(ColorCache::badColor, sizeof(Color)); 
+                } else {
+                    guiSocket.sendAll(reinterpret_cast<Color*>(p.Z), sizeof(Color));
+                }
             }
         }
     }

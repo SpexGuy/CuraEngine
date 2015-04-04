@@ -15,6 +15,8 @@ void flatColorOffsetCallback(int step, int steps, ClipperLib::IntPoint& source, 
 // ---------------- class ColorCache --------------------
 ColorCache ColorCache::instance;
 
+const Color* ColorCache::badColor = ColorCache::inst().getColor(-1.0f, -1.0f, -1.0f);
+
 ColorCache& ColorCache::inst() {
     return instance;
 }

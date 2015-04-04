@@ -153,11 +153,11 @@ private:
                         if (c[0] < 0.0f)
                         {
                             volume->addFace(v[0], v[1], v[2]);
-                            pNr = 0;
                         } else {
                             const Color* color = ColorCache::inst().getColor(c[0], c[1], c[2]);
                             volume->addColorFace(v[0], v[1], v[2], color);
                         }
+                        pNr = 0;
                     }
                     vertexCount--;
                 }

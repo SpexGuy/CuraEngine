@@ -1,5 +1,7 @@
 CuraEngine
 ==========
+
+[![Join the chat at https://gitter.im/phonyphonecall/CuraEngine](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/phonyphonecall/CuraEngine?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 The CuraEngine is a C++ console application for 3D printing GCode generation. It has been made as a better and faster alternative to the old Skeinforge engine.
 
 The CuraEngine is pure C++ and uses Clipper from http://www.angusj.com/delphi/clipper.php

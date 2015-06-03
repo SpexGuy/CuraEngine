@@ -81,6 +81,8 @@ public:
     SupportStorage support;
     Polygons wipeTower;
     Point wipePoint;
+
+    ExtentsManager extentsManager;
 };
 
 }//namespace cura

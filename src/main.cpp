@@ -34,6 +34,8 @@
 #include "gcodeExport.h"
 #include "fffProcessor.h"
 
+#include "color.h"
+
 void print_usage()
 {
     cura::logError("usage: CuraEngine [-h] [-v] [-m 3x3matrix] [-c <config file>] [-s <settingkey>=<value>] -o <output.gcode> <model.stl>\n");
@@ -78,6 +80,7 @@ int main(int argc, char **argv)
     cura::logError("\n");
     cura::logError("You should have received a copy of the GNU Affero General Public License\n");
     cura::logError("along with this program.  If not, see <http://www.gnu.org/licenses/>.\n");
+    cura::logError("\nColorExtentsRef is size %d\n", sizeof(ColorExtentsRef));
 
     if(!config.readSettings()) {
         cura::logError("Default config '%s' not used\n", DEFAULT_CONFIG_PATH);

@@ -2,12 +2,15 @@
 #ifndef COLOR_H
 #define COLOR_H
 
+#include <list>
+#include <vector>
 #include <set>
 #include "../libs/clipper/clipper.hpp"
 
 namespace cura {
 
 class ColorCache;
+class ColorExtents;
 
 class Color
 {
@@ -23,6 +26,14 @@ private:
     friend class ColorCache;
 };
 
+
+struct ColorExtent {
+    const Color *color;
+    float length;
+
+    ColorExtent(const Color *color, float length) : color(color), length(length) {}
+};
+
 struct ColorComparator {
     bool operator() (const Color& self, const Color& other) {
         if (self.r != other.r)
@@ -33,6 +44,58 @@ struct ColorComparator {
             return self.b < other.b;
         return false;
     }
+};
+
+class ColorExtentsRef
+{
+public:
+    ColorExtentsRef(ColorExtents *ref)  : soul(ref) {}
+    ColorExtentsRef(ClipperLib::cInt z) : soul(reinterpret_cast<ColorExtents *>(z)) {}
+    void operator=(const ColorExtentsRef &other) {soul = other.soul;}
+    void addExtent(const Color *color, float dx, float dy);
+    void addExtent(const Color *color, float length);
+    void moveExtents(std::list<ColorExtent> &additions);
+    void moveExtents(ColorExtents *other);
+    void moveExtents(ColorExtentsRef &other);
+    void reverse();
+    ColorExtents *getReference()  const {return soul;}
+    ClipperLib::cInt toClipperInt() const {return reinterpret_cast<ClipperLib::cInt>(soul);}
+
+private:
+    ColorExtents *soul;
+
+//    static_assert(sizeof(ColorExtents *) <= sizeof(ClipperLib::cInt)); // ensure that a ColorExtents can fit in a cInt
+//    char __pad[sizeof(ClipperLib::cInt) - sizeof(ColorExtents *)]; // pad the ColorExtentsRef to be the same size as a cInt, for conversion purposes
+};
+
+class ColorExtents : public ColorExtentsRef
+{
+public:
+    void addExtent(const Color *color, float dx, float dy);
+    void addExtent(const Color *color, float length);
+    void moveExtents(std::list<ColorExtent> &additions);
+    void moveExtents(ColorExtents *other);
+    void moveExtents(ColorExtentsRef &other);
+    void reverse();
+
+private:
+    ColorExtents() : ColorExtentsRef(this) {}
+    std::list<ColorExtent> extents;
+
+    friend class ExtentsManager; // only an ExtentsManager can create a ColorExtents
+};
+
+//static_assert(sizeof(ColorExtentsRef) == sizeof(ClipperLib::cInt), "ColorExtentsRef must be the same size as cInt because it is reinterpret_cast()ed into the Z member of ClipperLib::IntPoint");
+
+class ExtentsManager
+{
+public:
+    ExtentsManager() {}
+    ColorExtentsRef create();
+    ~ExtentsManager();
+
+private:
+    std::vector<ColorExtents *> allocatedExtents;
 };
 
 class ColorCache

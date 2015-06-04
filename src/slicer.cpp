@@ -86,6 +86,7 @@ void SlicerLayer::makePolygons(OptimizedVolume* ov, bool keepNoneClosed, bool ex
                     openPolygonList[i].clear();
                     break;
                 }else{
+                    //TODO: this should be a splice
                     for(unsigned int n=0; n<openPolygonList[j].size(); n++)
                         openPolygonList[i].add(openPolygonList[j][n]);
 
@@ -102,6 +103,7 @@ void SlicerLayer::makePolygons(OptimizedVolume* ov, bool keepNoneClosed, bool ex
         unsigned int bestA = -1;
         unsigned int bestB = -1;
         bool reversed = false;
+        // find the closest two segments
         for(unsigned int i=0;i<openPolygonList.size();i++)
         {
             if (openPolygonList[i].size() < 1) continue;
@@ -133,10 +135,10 @@ void SlicerLayer::makePolygons(OptimizedVolume* ov, bool keepNoneClosed, bool ex
                 }
             }
         }
-        
+        // don't connect further than 10mm
         if (bestScore >= MM2INT(10.0) * MM2INT(10.0))
             break;
-        
+        // connect the polygons
         if (bestA == bestB)
         {
             polygonList.add(openPolygonList[bestA]);
@@ -144,11 +146,12 @@ void SlicerLayer::makePolygons(OptimizedVolume* ov, bool keepNoneClosed, bool ex
         }else{
             if (reversed)
             {
+                //TODO: verify with a second pair of eyes that this is totally borked. (the part where A is added to B)
                 if (openPolygonList[bestA].polygonLength() > openPolygonList[bestB].polygonLength())
                 {
                     std::swap(bestA, bestB);
                 }
-                // Reverse color order in preperation to add to combine with reversed poly
+                // Reverse color order in preperation to add to reversed poly
                 for(unsigned int n=1; n<openPolygonList[bestA].size(); n++)
                     openPolygonList[bestA][n - 1].Z = openPolygonList[bestA][n].Z;
 
@@ -156,6 +159,7 @@ void SlicerLayer::makePolygons(OptimizedVolume* ov, bool keepNoneClosed, bool ex
                     openPolygonList[bestB].add(openPolygonList[bestA][n]);
                 openPolygonList[bestA].clear();
             }else{
+                //TODO: splice?
                 for(unsigned int n=0; n<openPolygonList[bestB].size(); n++)
                     openPolygonList[bestA].add(openPolygonList[bestB][n]);
                 openPolygonList[bestB].clear();
@@ -398,11 +402,22 @@ void Slicer::dumpNonPolySegsToHtml(const char* filename)
         for(unsigned int j=0; j<layers[i].segmentList.size(); j++)
         {
             SlicerSegment segment = layers[i].segmentList[j];
-            const Color& color = *reinterpret_cast<Color*>(segment.start.Z);
-            fprintf(f, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(color.r*255), int(color.g*255), int(color.b*255));
-            fprintf(f, "M %f,%f L %f,%f ", float(segment.start.X - modelMin.x)/scale, float(segment.start.Y - modelMin.y)/scale, float(segment.end.X - modelMin.x)/scale, float(segment.end.Y - modelMin.y)/scale);
-            fprintf(f, "\"/>");
-            fprintf(f, "Z\n");
+            assert(segment.start.Z);
+            ColorExtentsRef extents(segment.start.Z);
+            //TODO: this code shamelessly copied from fffProcessor.h::sendPolygonsToGui(..)
+            assert(extents.size() > 0);
+            float totalLength = vSize(segment.end - segment.start);
+            float distance = 0;
+            Point from = segment.start;
+            for (auto iter = extents.begin(), stop = extents.end(); iter != stop; iter++) {
+                const ColorExtent &ext = *iter;
+                distance += ext.length;
+                float z = distance / totalLength;
+                Point to = segment.start*(1.0f-z) + segment.end*z;
+                fprintf(f, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(ext.color->r*255), int(ext.color->g*255), int(ext.color->b*255));
+                fprintf(f, "M %f,%f L %f,%f \"/>\n", float(from.X - modelMin.x)/scale, float(from.Y - modelMin.y)/scale, float(to.X - modelMin.x)/scale, float(to.Y - modelMin.y)/scale);
+                from = to;
+            }
         }
         fprintf(f, "</g>\n");
         fprintf(f, "</svg>\n");
@@ -426,12 +441,27 @@ void Slicer::dumpSegmentsToHTML(const char* filename)
         for(unsigned int j=0; j<layers[i].polygonList.size(); j++)
         {
             PolygonRef p = layers[i].polygonList[j];
+            Point prev = p[p.size()-1];
             for(unsigned int n=0; n<p.size(); n++)
             {
-                const Color& color = *reinterpret_cast<const Color*>(p[n].Z);
-                fprintf(f, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(color.r*255), int(color.g*255), int(color.b*255));
-                fprintf(f, "M %f,%f L %f,%f ", float(p[n].X - modelMin.x)/scale, float(p[n].Y - modelMin.y)/scale, float(p[(n+1) % p.size()].X - modelMin.x)/scale, float(p[(n+1) % p.size()].Y - modelMin.y)/scale);
-                fprintf(f, "\"/>");
+                Point curr = p[n];
+                Point from = prev;
+                assert(curr.Z);
+                ColorExtentsRef extents(curr.Z);
+                //TODO: this code shamelessly copied from Slicer::dumpNonPolySegsToHtml which was copied from fffProcessor.h::sendPolygonsToGui(..)
+                assert(extents.size() > 0);
+                float totalLength = vSize(curr - prev);
+                float distance = 0;
+                for (auto iter = extents.begin(), stop = extents.end(); iter != stop; iter++) {
+                    const ColorExtent &ext = *iter;
+                    distance += ext.length;
+                    float z = distance / totalLength;
+                    Point to = prev*(1.0f-z) + curr*z;
+                    fprintf(f, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(ext.color->r*255), int(ext.color->g*255), int(ext.color->b*255));
+                    fprintf(f, "M %f,%f L %f,%f \"/>\n", float(from.X - modelMin.x)/scale, float(from.Y - modelMin.y)/scale, float(to.X - modelMin.x)/scale, float(to.Y - modelMin.y)/scale);
+                    from = to;
+                }
+                prev = curr;
             }
             fprintf(f, "Z\n");
         }

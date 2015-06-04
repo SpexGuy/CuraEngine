@@ -1,5 +1,6 @@
 /** Copyright (C) 2013 David Braam - Released under terms of the AGPLv3 License */
 #include "polygonOptimizer.h"
+#include "color.h"
 
 namespace cura {
 
@@ -11,6 +12,7 @@ void optimizePolygon(PolygonRef poly)
         Point p1 = poly[i];
         if (shorterThen(p0 - p1, MICRON2INT(10)))
         {
+            //TODO: color resolution > 10 microns?
             poly.remove(i);
             i --;
         }else if (shorterThen(p0 - p1, MICRON2INT(500)))
@@ -27,12 +29,11 @@ void optimizePolygon(PolygonRef poly)
             int64_t d = dot(diff0, diff2);
             if (d < -99999999999999LL)
             {
-                // Only remove points if they are not part of a color boundary
-                if (p1.Z == p2.Z)
-                {
-                    poly.remove(i);
-                    i --;
-                }
+                // removing p1, so move its color extents into p2
+                ColorExtentsRef p1Colors(p1.Z);
+                ColorExtentsRef(p2.Z).premoveExtents(p1Colors);
+                poly.remove(i);
+                i --;
             }else{
                 p0 = p1;
             }

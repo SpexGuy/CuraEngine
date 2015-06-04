@@ -30,6 +30,15 @@ void ColorExtentsRef::moveExtents(ColorExtents *other) {
 void ColorExtentsRef::moveExtents(ColorExtentsRef &other) {
     soul->moveExtents(other.soul);
 }
+void ColorExtentsRef::premoveExtents(std::list<ColorExtent> &additions) {
+    soul->premoveExtents(additions);
+}
+void ColorExtentsRef::premoveExtents(ColorExtents *other) {
+    soul->premoveExtents(other);
+}
+void ColorExtentsRef::premoveExtents(ColorExtentsRef &other) {
+    soul->premoveExtents(other.soul);
+}
 void ColorExtentsRef::reverse() {
     soul->reverse();
 }
@@ -51,6 +60,7 @@ unsigned int ColorExtentsRef::size() const {
 
 // ---------------- class ColorExtents ------------------
 
+//TODO: combine identical colors for efficiency
 void ColorExtents::addExtent(const Color *color, float dx, float dy) {
     extents.push_back(ColorExtent(color, sqrt(dx*dx + dy*dy)));
 }
@@ -65,6 +75,15 @@ void ColorExtents::moveExtents(ColorExtents *other) {
 }
 void ColorExtents::moveExtents(ColorExtentsRef &other) {
     extents.splice(extents.end(), other.getReference()->extents);
+}
+void ColorExtents::premoveExtents(std::list<ColorExtent> &additions) {
+    extents.splice(extents.begin(), additions);
+}
+void ColorExtents::premoveExtents(ColorExtents *other) {
+    extents.splice(extents.begin(), other->extents);
+}
+void ColorExtents::premoveExtents(ColorExtentsRef &other) {
+    extents.splice(extents.begin(), other.getReference()->extents);
 }
 void ColorExtents::reverse() {
     extents.reverse();

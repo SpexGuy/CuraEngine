@@ -61,6 +61,9 @@ public:
     void moveExtents(std::list<ColorExtent> &additions);
     void moveExtents(ColorExtents *other);
     void moveExtents(ColorExtentsRef &other);
+    void premoveExtents(std::list<ColorExtent> &additions);
+    void premoveExtents(ColorExtents *other);
+    void premoveExtents(ColorExtentsRef &other);
     void reverse();
     iterator begin();
     iterator end();
@@ -85,6 +88,9 @@ public:
     void moveExtents(std::list<ColorExtent> &additions);
     void moveExtents(ColorExtents *other);
     void moveExtents(ColorExtentsRef &other);
+    void premoveExtents(std::list<ColorExtent> &additions);
+    void premoveExtents(ColorExtents *other);
+    void premoveExtents(ColorExtentsRef &other);
     void reverse();
     iterator begin() {return extents.begin();}
     iterator end() {return extents.end();}

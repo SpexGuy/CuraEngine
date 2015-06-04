@@ -313,7 +313,7 @@ void SlicerLayer::makePolygons(OptimizedVolume* ov, bool keepNoneClosed, bool ex
 }
 
 
-Slicer::Slicer(OptimizedVolume* ov, ExtentsManager &extentsManager, int32_t initial, int32_t thickness, bool keepNoneClosed, bool extensiveStitching)
+Slicer::Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool keepNoneClosed, bool extensiveStitching)
 {
     modelSize = ov->model->modelSize;
     modelMin = ov->model->vMin;
@@ -371,7 +371,7 @@ Slicer::Slicer(OptimizedVolume* ov, ExtentsManager &extentsManager, int32_t init
             s.addedToPolygon = false;
 
             // Copy color from optimized face to the segment points
-            ColorExtentsRef newExt = extentsManager.create();
+            ColorExtentsRef newExt = ExtentsManager::inst().create();
             newExt.addExtent(ov->faces[i].color, s.end.X - s.start.X, s.end.Y - s.start.Y);
             s.end.Z = s.start.Z = newExt.toClipperInt();
             layers[layerNr].segmentList.push_back(s);

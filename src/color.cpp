@@ -2,15 +2,29 @@
 #include <assert.h>
 #include <math.h>
 #include "color.h"
+#include "utils/intpoint.h"
 
 namespace cura {
 
 void flatColorCallback(ClipperLib::IntPoint& z1, ClipperLib::IntPoint& z2, ClipperLib::IntPoint& pt) {
-    pt.Z = z1.Z;
+    assert(z2.Z);
+    float z1dist = sqrt(vSize2f(pt-z1));
+    ColorExtentsRef ptExtents = ExtentsManager::inst().create();
+    ColorExtentsRef(z1.Z).transferFront(z1dist, ptExtents);
+    assert(ptExtents.size() > 0);
+    pt.Z = ptExtents.toClipperInt();
 }
 
 void flatColorOffsetCallback(int step, int steps, ClipperLib::IntPoint& source, ClipperLib::IntPoint& dest) {
-    dest.Z = source.Z;
+    ColorExtentsRef newRef = ExtentsManager::inst().create();
+    if (step > 0) {
+        const Color *color = std::prev(ColorExtentsRef(source.Z).end())->color;
+        newRef.addExtent(color, 1.0f);
+    } else {
+        ColorExtentsRef baseRef(source.Z);
+        newRef.copyExtents(baseRef);
+    }
+    dest.Z = newRef.toClipperInt();
 }
 
 // ---------------- class ColorExtentsRef ---------------
@@ -39,8 +53,20 @@ void ColorExtentsRef::premoveExtents(ColorExtents *other) {
 void ColorExtentsRef::premoveExtents(ColorExtentsRef &other) {
     soul->premoveExtents(other.soul);
 }
+void ColorExtentsRef::copyExtents(ColorExtentsRef &other) {
+    soul->copyExtents(other.soul);
+}
 void ColorExtentsRef::reverse() {
     soul->reverse();
+}
+//void ColorExtentsRef::resize(float distance) {
+//    soul->resize(distance);
+//}
+float ColorExtentsRef::getLength() {
+    return soul->getLength();
+}
+void ColorExtentsRef::transferFront(float distance, ColorExtentsRef &other) {
+    soul->transferFront(distance, other);
 }
 ColorExtents::iterator ColorExtentsRef::begin() {
     return soul->begin();
@@ -65,31 +91,81 @@ void ColorExtents::addExtent(const Color *color, float dx, float dy) {
     extents.push_back(ColorExtent(color, sqrt(dx*dx + dy*dy)));
 }
 void ColorExtents::addExtent(const Color *color, float length) {
+    totalLength += length;
     extents.push_back(ColorExtent(color, length));
 }
 void ColorExtents::moveExtents(std::list<ColorExtent> &additions) {
+    for (ColorExtent &ext : additions)
+        totalLength += ext.length;
     extents.splice(extents.end(), additions);
 }
 void ColorExtents::moveExtents(ColorExtents *other) {
+    totalLength += other->totalLength;
     extents.splice(extents.end(), other->extents);
 }
 void ColorExtents::moveExtents(ColorExtentsRef &other) {
+    totalLength += other.getReference()->totalLength;
     extents.splice(extents.end(), other.getReference()->extents);
 }
 void ColorExtents::premoveExtents(std::list<ColorExtent> &additions) {
+    for (ColorExtent &ext : additions)
+        totalLength += ext.length;
     extents.splice(extents.begin(), additions);
 }
 void ColorExtents::premoveExtents(ColorExtents *other) {
+    totalLength += other->totalLength;
     extents.splice(extents.begin(), other->extents);
 }
 void ColorExtents::premoveExtents(ColorExtentsRef &other) {
+    totalLength += other.getReference()->totalLength;
     extents.splice(extents.begin(), other.getReference()->extents);
+}
+void ColorExtents::copyExtents(ColorExtents *other) {
+    totalLength += other->totalLength;
+    extents.insert(extents.end(), other->begin(), other->end());
 }
 void ColorExtents::reverse() {
     extents.reverse();
 }
+//void ColorExtents::resize(float length) {
+//    float factor = length/totalLength;
+//    for (ColorExtent &ext : extents) {
+//        ext.length *= factor;
+//    }
+//    totalLength = length;
+//}
+void ColorExtents::transferFront(float distance, ColorExtentsRef &other) {
+    // in
+    // |--------------------------------|                   distance
+    // |-----|------|--------------|-------------|--------| pre-transfer
+    // out
+    //                                  |--------|--------| post-transfer
+    // |-----|------|--------------|----|                   other
+    ColorExtents *o = other.getReference();
+    // find the extent on which distance ends
+    iterator transferPoint = extents.begin();
+    assert(transferPoint != extents.end());
+    while(distance >= transferPoint->length) {
+        distance -= transferPoint->length;
+        ++transferPoint;
+        assert(transferPoint != extents.end());
+    }
+    // transfer preceding elements
+    o->extents.splice(o->extents.end(), extents, extents.begin(), transferPoint);
+    // add subextent on other side
+    if (distance == 0.0f)
+        o->addExtent(transferPoint->color, distance);
+    // update this side
+    transferPoint->length -= distance;
+}
 
 // ---------------- class ExtentsManager ----------------
+
+ExtentsManager ExtentsManager::instance;
+
+ExtentsManager& ExtentsManager::inst() {
+    return instance;
+}
 
 ColorExtentsRef ExtentsManager::create() {
     ColorExtents *newExtents = new ColorExtents();

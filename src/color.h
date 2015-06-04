@@ -64,7 +64,11 @@ public:
     void premoveExtents(std::list<ColorExtent> &additions);
     void premoveExtents(ColorExtents *other);
     void premoveExtents(ColorExtentsRef &other);
+    void copyExtents(ColorExtentsRef &other);
     void reverse();
+    //void resize(float distance);
+    float getLength();
+    void transferFront(float distance, ColorExtentsRef &other);
     iterator begin();
     iterator end();
     const_iterator begin() const;
@@ -91,7 +95,11 @@ public:
     void premoveExtents(std::list<ColorExtent> &additions);
     void premoveExtents(ColorExtents *other);
     void premoveExtents(ColorExtentsRef &other);
+    void copyExtents(ColorExtents *other);
     void reverse();
+    //void resize(float distance);
+    void transferFront(float distance, ColorExtentsRef &other);
+    float getLength() {return totalLength;}
     iterator begin() {return extents.begin();}
     iterator end() {return extents.end();}
     const_iterator begin() const {return extents.begin();}
@@ -101,6 +109,7 @@ public:
 private:
     ColorExtents() : ColorExtentsRef(this) {}
     std::list<ColorExtent> extents;
+    float totalLength;
 
     friend class ExtentsManager; // only an ExtentsManager can create a ColorExtents
 };
@@ -108,12 +117,15 @@ private:
 class ExtentsManager
 {
 public:
-    ExtentsManager() {}
+    static ExtentsManager& inst();
     ColorExtentsRef create();
     ~ExtentsManager();
 
 private:
+    static ExtentsManager instance;
+
     std::vector<ColorExtents *> allocatedExtents;
+    ExtentsManager() {}
 };
 
 class ColorCache

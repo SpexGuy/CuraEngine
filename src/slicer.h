@@ -145,7 +145,7 @@ public:
     std::vector<SlicerLayer> layers;
     Point3 modelSize, modelMin;
     
-    Slicer(OptimizedVolume* ov, ExtentsManager &extentsManager, int32_t initial, int32_t thickness, bool keepNoneClosed, bool extensiveStitching);
+    Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool keepNoneClosed, bool extensiveStitching);
     
     SlicerSegment project2D(Point3& p0, Point3& p1, Point3& p2, int32_t z) const
     {

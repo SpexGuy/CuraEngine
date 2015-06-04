@@ -33,6 +33,21 @@ void ColorExtentsRef::moveExtents(ColorExtentsRef &other) {
 void ColorExtentsRef::reverse() {
     soul->reverse();
 }
+ColorExtents::iterator ColorExtentsRef::begin() {
+    return soul->begin();
+}
+ColorExtents::iterator ColorExtentsRef::end() {
+    return soul->end();
+}
+ColorExtents::const_iterator ColorExtentsRef::begin() const {
+    return soul->begin();
+}
+ColorExtents::const_iterator ColorExtentsRef::end() const {
+    return soul->end();
+}
+unsigned int ColorExtentsRef::size() const {
+    return soul->size();
+}
 
 // ---------------- class ColorExtents ------------------
 

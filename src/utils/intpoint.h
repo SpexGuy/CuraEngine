@@ -99,6 +99,9 @@ INLINE Point operator-(const Point& p0, const Point& p1) { return Point(p0.X-p1.
 INLINE Point operator*(const Point& p0, const int32_t i) { return Point(p0.X*i, p0.Y*i, p0.Z); }
 INLINE Point operator/(const Point& p0, const int32_t i) { return Point(p0.X/i, p0.Y/i, p0.Z); }
 
+INLINE Point operator*(const Point& p0, const int64_t i) { return p0 * int32_t(i); }
+INLINE Point operator*(const Point& p0, const float   f) { return Point(p0.X*f, p0.Y*f, p0.Z); }
+
 //Point& operator += (const Point& p) { x += p.x; y += p.y; return *this; }
 //Point& operator -= (const Point& p) { x -= p.x; y -= p.y; return *this; }
 

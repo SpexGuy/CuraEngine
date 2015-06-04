@@ -1,9 +1,11 @@
 #ifndef FFF_PROCESSOR_H
 #define FFF_PROCESSOR_H
 
+#include <assert.h>
 #include <algorithm>
 #include <vector>
 #include "color.h"
+#include "utils/intpoint.h"
 #include "utils/socket.h"
 
 #define GUI_CMD_REQUEST_MESH 0x01
@@ -53,17 +55,52 @@ public:
         for(unsigned int n=0; n<polygons.size(); n++)
         {
             PolygonRef polygon = polygons[n];
+            unsigned int size = 0;
+            for (Point p : polygon) {
+                if (!p.Z)
+                    size += 1;
+                else
+                    size += ColorExtentsRef(p.Z).size();
+            }
+
             guiSocket.sendNr(polygon.size());
-            for(Point p : polygon) {
+            for(unsigned int c = 0; c < polygon.size(); c++) {
+                Point p = polygon[c];
+                // calculate and send intermediate points (at color transitions)
+                if (c != 0 && p.Z) {
+                    Point fromP = polygon[c-1];
+                    ColorExtentsRef extents(p.Z);
+                    if (extents.size() > 0) {
+                        float totalLength = vSize(p - fromP);
+                        float distance = 0;
+                        for (auto iter = extents.begin(), stop = std::prev(extents.end()); iter != stop; iter++) {
+                            const ColorExtent &ext = *iter;
+                            distance += ext.length;
+                            float z = distance / totalLength;
+                            Point midPoint = fromP*(1.0f-z) + p*z;
+                            guiSocket.sendAll(&midPoint.X, sizeof(midPoint.X));
+                            guiSocket.sendAll(&midPoint.Y, sizeof(midPoint.Y));
+                        }
+                    } else {
+                        //fuck. Why do we have a valid but empty extent?
+                        assert(false);
+                    }
+                }
+                //then send the actual point
                 guiSocket.sendAll(&p.X, sizeof(p.X));
                 guiSocket.sendAll(&p.Y, sizeof(p.Y));
             }
+            bool first = true;
             for(Point p : polygon) {
-                if (!p.Z) {
-                    guiSocket.sendAll(ColorCache::badColor, sizeof(Color)); 
+                if (!p.Z || first) {
+                    guiSocket.sendAll(ColorCache::badColor, sizeof(Color));
                 } else {
-                    guiSocket.sendAll(reinterpret_cast<Color*>(p.Z), sizeof(Color));
+                    ColorExtentsRef extents(p.Z);
+                    for (ColorExtent &ext : extents) {
+                        guiSocket.sendAll(ext.color, sizeof(Color));
+                    }
                 }
+                first = false;
             }
         }
     }

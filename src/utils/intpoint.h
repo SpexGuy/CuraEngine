@@ -87,8 +87,7 @@ typedef ClipperLib::IntPoint Point;
 class IntPoint {
 public:
     int X, Y;
-    cura::Color* color;
-    Point p() { return Point(X, Y, reinterpret_cast<ClipperLib::cInt>(color)); }
+    Point p() { return Point(X, Y, 0); }
 };
 #define POINT_MIN std::numeric_limits<ClipperLib::cInt>::min()
 #define POINT_MAX std::numeric_limits<ClipperLib::cInt>::max()

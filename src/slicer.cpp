@@ -406,7 +406,7 @@ void Slicer::dumpNonPolySegsToHtml(const char* filename)
             ColorExtentsRef extents(segment.start.Z);
             //TODO: this code shamelessly copied from fffProcessor.h::sendPolygonsToGui(..)
             assert(extents.size() > 0);
-            float totalLength = vSize(segment.end - segment.start);
+            float totalLength = extents.getLength();
             float distance = 0;
             Point from = segment.start;
             for (auto iter = extents.begin(), stop = extents.end(); iter != stop; iter++) {
@@ -441,29 +441,26 @@ void Slicer::dumpSegmentsToHTML(const char* filename)
         for(unsigned int j=0; j<layers[i].polygonList.size(); j++)
         {
             PolygonRef p = layers[i].polygonList[j];
-            Point prev = p[p.size()-1];
+            unsigned int prev = p.size()-1;
             for(unsigned int n=0; n<p.size(); n++)
             {
-                Point curr = p[n];
-                Point from = prev;
-                assert(curr.Z);
-                ColorExtentsRef extents(curr.Z);
+                Point from = p[prev];
+                assert(p[n].Z);
+                ColorExtentsRef extents(p[n].Z);
                 //TODO: this code shamelessly copied from Slicer::dumpNonPolySegsToHtml which was copied from fffProcessor.h::sendPolygonsToGui(..)
                 assert(extents.size() > 0);
-                float totalLength = vSize(curr - prev);
+                float totalLength = extents.getLength();
                 float distance = 0;
-                for (auto iter = extents.begin(), stop = extents.end(); iter != stop; iter++) {
-                    const ColorExtent &ext = *iter;
+                for (ColorExtent &ext : extents) {
                     distance += ext.length;
                     float z = distance / totalLength;
-                    Point to = prev*(1.0f-z) + curr*z;
+                    Point to = p[prev]*(1.0f-z) + p[n]*z;
                     fprintf(f, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(ext.color->r*255), int(ext.color->g*255), int(ext.color->b*255));
                     fprintf(f, "M %f,%f L %f,%f \"/>\n", float(from.X - modelMin.x)/scale, float(from.Y - modelMin.y)/scale, float(to.X - modelMin.x)/scale, float(to.Y - modelMin.y)/scale);
                     from = to;
                 }
-                prev = curr;
+                prev = n;
             }
-            fprintf(f, "Z\n");
         }
         fprintf(f, "</g>\n");
         for(unsigned int j=0; j<layers[i].openPolygons.size(); j++)

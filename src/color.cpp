@@ -157,6 +157,9 @@ void ColorExtents::transferFront(float distance, ColorExtentsRef &other) {
         o->addExtent(transferPoint->color, distance);
     // update this side
     transferPoint->length -= distance;
+    // update lengths
+    totalLength -= distance;
+    o->totalLength = distance;
 }
 
 // ---------------- class ExtentsManager ----------------

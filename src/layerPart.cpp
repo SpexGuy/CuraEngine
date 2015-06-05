@@ -97,17 +97,23 @@ void dumpLayerparts(SliceDataStorage& storage, const char* filename)
                 SliceLayerPart* part = &layer->parts[i];
                 for(unsigned int j=0;j<part->outline.size();j++)
                 {
-                    for(unsigned int k=0;k<part->outline[j].size();k++) {
-                        const PolygonRef& p = part->outline[j];
-                        const Color& color = *reinterpret_cast<const Color*>(p[k].Z);
-                        fprintf(out, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(color.r*255), int(color.g*255), int(color.b*255));
-                        fprintf(out, "M %f,%f L %f,%f ", float(p[k].X - modelMin.x)/modelSize.x*500, float(p[k].Y - modelMin.y)/modelSize.y*500, float(p[(k+1) % p.size()].X - modelMin.x)/modelSize.x*500, float(p[(k+1) % p.size()].Y - modelMin.y)/modelSize.y*500);
-                        fprintf(out, "\"/>");
+                    const PolygonRef& p = part->outline[j];
+                    unsigned int prev = p.size()-1;
+                    for(unsigned int k=0;k<p.size();k++) {
+                        Point from = p[prev];
+                        ColorExtentsRef extents(p[k].Z);
+                        float len = extents.getLength();
+                        float distance = 0;
+                        for (ColorExtent &ext : extents) {
+                            distance += ext.length;
+                            float z = distance / len;
+                            Point to = p[prev]*(1-z) + p[k]*z;
+                            fprintf(out, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(ext.color->r*255), int(ext.color->g*255), int(ext.color->b*255));
+                            fprintf(out, "M %f,%f L %f,%f \" style=\"fill:%s;\"/>", float(from.X - modelMin.x)/modelSize.x*500, float(from.Y - modelMin.y)/modelSize.y*500, float(to.X - modelMin.x)/modelSize.x*500, float(to.Y - modelMin.y)/modelSize.y*500, j == 0 ? "gray" : "red");
+                        }
+                        assert(distance <= len);
+                        prev = k;
                     }
-                    if (j == 0)
-                        fprintf(out, "\" style=\"fill:gray; stroke:black;stroke-width:1\" />\n");
-                    else
-                        fprintf(out, "\" style=\"fill:red; stroke:black;stroke-width:1\" />\n");
                 }
             }
             fprintf(out, "</g></svg>\n");

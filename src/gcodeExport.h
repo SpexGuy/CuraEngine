@@ -90,6 +90,8 @@ public:
     
     void writeDelay(double timeAmount);
     
+    void writeColors(Point p, float extrusion);
+
     void writeMove(Point p, int speed, int lineWidth);
     
     void writeRetraction(bool force=false);

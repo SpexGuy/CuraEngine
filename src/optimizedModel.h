@@ -11,7 +11,7 @@ class OptimizedFace
 public:
     int index[3];
     int touching[3];
-    const Color* color;
+    const cura::Color* color;
 };
 class OptimizedPoint3
 {

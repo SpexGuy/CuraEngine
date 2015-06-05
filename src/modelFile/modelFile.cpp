@@ -7,6 +7,8 @@
 #include "../utils/logoutput.h"
 #include "../utils/string.h"
 
+using cura::Color;
+
 FILE* binaryMeshBlob = nullptr;
 
 /* Custom fgets function to support Mac line-ends in Ascii STL files. OpenSCAD produces this when used on Mac */

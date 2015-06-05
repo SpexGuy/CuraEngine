@@ -5,6 +5,7 @@
 #include <list>
 #include <vector>
 #include <set>
+#include <string>
 #include <assert.h>
 #include "../libs/clipper/clipper.hpp"
 
@@ -76,6 +77,7 @@ public:
     unsigned int size() const;
     ColorExtents *getReference() const {return soul;}
     ClipperLib::cInt toClipperInt() const {return reinterpret_cast<ClipperLib::cInt>(soul);}
+    std::string toString() const;
 
 private:
     ColorExtents *soul;
@@ -105,9 +107,10 @@ public:
     const_iterator begin() const {return extents.begin();}
     const_iterator end() const {return extents.end();}
     unsigned int size() const {return extents.size();}
+    std::string toString() const;
 
 private:
-    ColorExtents() : ColorExtentsRef(this) {}
+    ColorExtents() : ColorExtentsRef(this), totalLength(0.0f) {}
     std::list<ColorExtent> extents;
     float totalLength;
 

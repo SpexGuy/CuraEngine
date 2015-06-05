@@ -11,7 +11,7 @@
 namespace cura {
 
 GCodeExport::GCodeExport()
-: currentPosition(0,0,0), startPosition(INT32_MIN,INT32_MIN,0), currentColor(nullptr)
+: currentPosition(0,0,0), startPosition(INT32_MIN,INT32_MIN,0)
 {
     extrusionAmount = 0;
     extrusionPerMM = 0;
@@ -211,10 +211,15 @@ void GCodeExport::writeDelay(double timeAmount)
 }
 
 void GCodeExport::writeColors(Point p, float extrusion) {
-    ColorExtentsRef extents(p.Z);
-    float scale = extrusion / extents.getLength();
-    for (ColorExtent &ext : extents) {
-        writeComment(";;COLOR;;;C1 R%f G%f B%f E%f", ext.color->r, ext.color->g, ext.color->b, ext.length * scale);
+    if (p.Z) {
+        ColorExtentsRef extents(p.Z);
+        float scale = extrusion / extents.getLength();
+        for (ColorExtent &ext : extents) {
+            writeComment(";;COLOR;;;C1 R%f G%f B%f E%f", ext.color->r, ext.color->g, ext.color->b, ext.length * scale);
+        }
+    } else {
+        // infill and stuff
+        writeComment(";;COLOR;;;C1 R1.0 G1.0 B1.0 E%f", extrusion);
     }
 }
 

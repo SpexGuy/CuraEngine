@@ -1,17 +1,31 @@
 /** Copyright (C) 2013 David Braam - Released under terms of the AGPLv3 License */
 #include <assert.h>
 #include <math.h>
+#include <sstream>
+#include <iostream>
 #include "color.h"
 #include "utils/intpoint.h"
+
+using std::string;
+using std::ostringstream;
+using std::endl;
+//using std::cout;
 
 namespace cura {
 
 void flatColorCallback(ClipperLib::IntPoint& z1, ClipperLib::IntPoint& z2, ClipperLib::IntPoint& pt) {
     assert(z2.Z);
     float z1dist = sqrt(vSize2f(pt-z1));
+    float zdist = sqrt(vSize2f(z2-z1));
     ColorExtentsRef ptExtents = ExtentsManager::inst().create();
-    ColorExtentsRef(z1.Z).transferFront(z1dist, ptExtents);
+    ColorExtentsRef z2Extents(z2.Z);
+    float scale = z2Extents.getLength() / zdist;
+//    cout << "----------------- Transfer " << z1dist << " of " << zdist << " (" << scale << ") from ------------------" << endl;
+//    cout << z2Extents.toString();
+    z2Extents.transferFront(z1dist * scale, ptExtents);
     assert(ptExtents.size() > 0);
+ //   cout << "to" << endl;
+ //   cout << ptExtents.toString() << z2Extents.toString();
     pt.Z = ptExtents.toClipperInt();
 }
 
@@ -83,12 +97,15 @@ ColorExtents::const_iterator ColorExtentsRef::end() const {
 unsigned int ColorExtentsRef::size() const {
     return soul->size();
 }
+string ColorExtentsRef::toString() const {
+    return soul->toString();
+}
 
 // ---------------- class ColorExtents ------------------
 
 //TODO: combine identical colors for efficiency
 void ColorExtents::addExtent(const Color *color, float dx, float dy) {
-    extents.push_back(ColorExtent(color, sqrt(dx*dx + dy*dy)));
+    addExtent(color, sqrt(dx*dx + dy*dy));
 }
 void ColorExtents::addExtent(const Color *color, float length) {
     totalLength += length;
@@ -153,13 +170,22 @@ void ColorExtents::transferFront(float distance, ColorExtentsRef &other) {
     // transfer preceding elements
     o->extents.splice(o->extents.end(), extents, extents.begin(), transferPoint);
     // add subextent on other side
-    if (distance == 0.0f)
+    if (distance > 0.0f)
         o->addExtent(transferPoint->color, distance);
     // update this side
     transferPoint->length -= distance;
     // update lengths
     totalLength -= distance;
     o->totalLength = distance;
+}
+string ColorExtents::toString() const {
+    ostringstream out;
+    out << "Extents(" << totalLength << ") {" << endl;
+    for (const ColorExtent &ext : extents) {
+        out << "    " << ext.length << " (" << ext.color->r << ", " << ext.color->g << ", " << ext.color->b << ")" << endl;
+    }
+    out << "}" << endl;
+    return out.str();
 }
 
 // ---------------- class ExtentsManager ----------------

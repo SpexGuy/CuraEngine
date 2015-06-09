@@ -1067,7 +1067,6 @@ bool ClipperBase::AddPath(const Path &pg, PolyType PolyTyp, bool Closed)
   //create a new edge array ...
   TEdge *edges = new TEdge [highI +1];
 
-  bool IsFlat = true;
   //1. Basic (first) edge initialization ...
   try
   {
@@ -1135,6 +1134,7 @@ bool ClipperBase::AddPath(const Path &pg, PolyType PolyTyp, bool Closed)
     eStart->Prev->OutIdx = Skip;
   }
 
+  bool IsFlat = true;
   //3. Do second stage of edge initialization ...
   E = eStart;
   do
@@ -1979,23 +1979,24 @@ void Clipper::DeleteFromSEL(TEdge *e)
 #ifdef use_xyz
 void Clipper::SetZ(IntPoint& pt, TEdge& e1, TEdge& e2)
 {
-// Old implementation (borked)
-//  pt.Z = 0;
-//  if (m_ZFill)
-//  {
-//    //put the 'preferred' point as first parameter ...
-//    if (e.OutIdx < 0)
-//      (*m_ZFill)(e.Bot, e.Top, pt); //outside a path so presume entering
-//    else
-//      (*m_ZFill)(e.Top, e.Bot, pt); //inside a path so presume exiting
-//  }
+  //Old implementation (borked)
+  pt.Z = 0;
+  if (m_ZFill)
+  {
+    //put the 'preferred' point as first parameter ...
+    //COLOR: this is wrong, I'm pretty sure.
+    if (e1.OutIdx < 0)
+      (*m_ZFill)(e1.Bot, e1.Top, e2.Bot, e2.Top, pt); //outside a path so presume entering
+    else
+      (*m_ZFill)(e1.Top, e1.Bot, e2.Top, e2.Bot, pt); //inside a path so presume exiting
+  }
   //COLOR: fix edge order
-  if (pt.Z != 0 || !m_ZFill) return;
-  else if (pt == e1.Bot) pt.Z = e1.Bot.Z;
-  else if (pt == e1.Top) pt.Z = e1.Top.Z;
-  else if (pt == e2.Bot) pt.Z = e2.Bot.Z;
-  else if (pt == e2.Top) pt.Z = e2.Top.Z;
-  else (*m_ZFill)(e1.Bot, e1.Top, e2.Bot, e2.Top, pt);
+//  if (pt.Z != 0 || !m_ZFill) return;
+//  else if (pt == e1.Bot) pt.Z = e1.Bot.Z;
+//  else if (pt == e1.Top) pt.Z = e1.Top.Z;
+//  else if (pt == e2.Bot) pt.Z = e2.Bot.Z;
+//  else if (pt == e2.Top) pt.Z = e2.Top.Z;
+//  else (*m_ZFill)(e1.Bot, e1.Top, e2.Bot, e2.Top, pt);
 }
 //------------------------------------------------------------------------------
 #endif

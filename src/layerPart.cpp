@@ -61,33 +61,42 @@ void createLayerParts(SliceVolumeStorage& storage, Slicer* slicer, int unionAllT
     }
 }
 
+void writePolygons(FILE* out, Polygons &poly, Point3 &offset, Point3 &scale) {
+    fprintf(out, "<g>\n");
+    for(unsigned int j=0;j<poly.size();j++)
+    {
+        const PolygonRef& p = poly[j];
+        unsigned int prev = p.size()-1;
+        for(unsigned int k=0;k<p.size();k++) {
+            Point from = p[prev];
+            ColorExtentsRef extents(p[k].Z);
+            float len = extents.getLength();
+            float distance = 0;
+            for (ColorExtent &ext : extents) {
+                distance += ext.length;
+                float z = distance / len;
+                Point to = p[prev]*(1-z) + p[k]*z;
+                fprintf(out, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(ext.color->r*255), int(ext.color->g*255), int(ext.color->b*255));
+                fprintf(out, "M %f,%f L %f,%f \" style=\"fill:%s;\"/>", float(from.X - offset.x)/scale.x*500, float(from.Y - offset.y)/scale.y*500, float(to.X - offset.x)/scale.x*500, float(to.Y - offset.y)/scale.y*500, j == 0 ? "gray" : "red");
+            }
+            assert(distance <= len);
+            prev = k;
+        }
+    }
+    fprintf(out, "</g>\n");
+}
+
 void dumpLayerparts(SliceDataStorage& storage, const char* filename)
 {
     FILE* out = fopen(filename, "w");
     fprintf(out, "<!DOCTYPE html><html><body>");
-    Point3 modelSize = storage.modelSize;
-    Point3 modelMin = storage.modelMin;
     
     for(unsigned int volumeIdx=0; volumeIdx<storage.volumes.size(); volumeIdx++)
     {
         for(unsigned int layerNr=0;layerNr<storage.volumes[volumeIdx].layers.size(); layerNr++)
         {
-            fprintf(out, "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" style=\"width: 500px; height:500px\">\n");
             SliceLayer* layer = &storage.volumes[volumeIdx].layers[layerNr];
-/*            for(unsigned int i=0;i<layer->parts.size();i++)
-            {
-                SliceLayerPart* part = &layer->parts[i];
-                for(unsigned int j=0;j<part->outline.size();j++)
-                {
-                    fprintf(out, "<polygon points=\"");
-                    for(unsigned int k=0;k<part->outline[j].size();k++)
-                        fprintf(out, "%f,%f ", float(part->outline[j][k].X - modelMin.x)/modelSize.x*500, float(part->outline[j][k].Y - modelMin.y)/modelSize.y*500);
-                    if (j == 0)
-                        fprintf(out, "\" style=\"fill:gray; stroke:black;stroke-width:1\" />\n");
-                    else
-                        fprintf(out, "\" style=\"fill:red; stroke:black;stroke-width:1\" />\n");
-                }
-            } */
+            fprintf(out, "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" style=\"width: 500px; height:500px\">\n");
             fprintf(out, "<marker id='MidMarker' viewBox='0 0 10 10' refX='5' refY='5' markerUnits='strokeWidth' markerWidth='10' markerHeight='10' stroke='lightblue' stroke-width='2' fill='none' orient='auto'>");
             fprintf(out, "<path d='M 0 0 L 10 5 M 0 10 L 10 5'/>");
             fprintf(out, "</marker>");
@@ -95,25 +104,9 @@ void dumpLayerparts(SliceDataStorage& storage, const char* filename)
             for(unsigned int i=0;i<layer->parts.size();i++)
             {
                 SliceLayerPart* part = &layer->parts[i];
-                for(unsigned int j=0;j<part->outline.size();j++)
-                {
-                    const PolygonRef& p = part->outline[j];
-                    unsigned int prev = p.size()-1;
-                    for(unsigned int k=0;k<p.size();k++) {
-                        Point from = p[prev];
-                        ColorExtentsRef extents(p[k].Z);
-                        float len = extents.getLength();
-                        float distance = 0;
-                        for (ColorExtent &ext : extents) {
-                            distance += ext.length;
-                            float z = distance / len;
-                            Point to = p[prev]*(1-z) + p[k]*z;
-                            fprintf(out, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(ext.color->r*255), int(ext.color->g*255), int(ext.color->b*255));
-                            fprintf(out, "M %f,%f L %f,%f \" style=\"fill:%s;\"/>", float(from.X - modelMin.x)/modelSize.x*500, float(from.Y - modelMin.y)/modelSize.y*500, float(to.X - modelMin.x)/modelSize.x*500, float(to.Y - modelMin.y)/modelSize.y*500, j == 0 ? "gray" : "red");
-                        }
-                        assert(distance <= len);
-                        prev = k;
-                    }
+                writePolygons(out, part->outline, storage.modelMin, storage.modelSize);
+                for (Polygons &inset : part->insets) {
+                    writePolygons(out, inset, storage.modelMin, storage.modelSize);
                 }
             }
             fprintf(out, "</g></svg>\n");

@@ -9,12 +9,13 @@
 _bin
 _obj
 *.depend
+*.html
+*.spectrom
 *.o
 .*.swp
 *.gcode
 CuraEngine
 build/*
 *~
-NUL
 CuraEngine.layout
 CuraEngine.cbp

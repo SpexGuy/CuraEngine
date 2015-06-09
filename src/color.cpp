@@ -13,32 +13,38 @@ using std::endl;
 
 namespace cura {
 
-void flatColorCallback(ClipperLib::IntPoint& z1, ClipperLib::IntPoint& z2, ClipperLib::IntPoint& pt) {
-    assert(z2.Z);
-    float z1dist = sqrt(vSize2f(pt-z1));
-    float zdist = sqrt(vSize2f(z2-z1));
-    ColorExtentsRef ptExtents = ExtentsManager::inst().create();
-    ColorExtentsRef z2Extents(z2.Z);
-    float scale = z2Extents.getLength() / zdist;
-//    cout << "----------------- Transfer " << z1dist << " of " << zdist << " (" << scale << ") from ------------------" << endl;
-//    cout << z2Extents.toString();
-    z2Extents.transferFront(z1dist * scale, ptExtents);
-    assert(ptExtents.size() > 0);
- //   cout << "to" << endl;
- //   cout << ptExtents.toString() << z2Extents.toString();
-    pt.Z = ptExtents.toClipperInt();
+void flatColorCallback(ClipperLib::IntPoint& e1bot, ClipperLib::IntPoint& e1top,
+                       ClipperLib::IntPoint& e2bot, ClipperLib::IntPoint& e2top,
+                       ClipperLib::IntPoint& pt) {
+    //TODO: This is totally wrong.
+    pt.Z = e1top.Z;
+//    assert(z2.Z);
+//    float z1dist = sqrt(vSize2f(pt-z1));
+//    float zdist = sqrt(vSize2f(z2-z1));
+//    ColorExtentsRef ptExtents = ExtentsManager::inst().create();
+//    ColorExtentsRef z2Extents(z2.Z);
+//    float scale = z2Extents.getLength() / zdist;
+////    cout << "----------------- Transfer " << z1dist << " of " << zdist << " (" << scale << ") from ------------------" << endl;
+////    cout << z2Extents.toString();
+////    ptExtents.copyExtents(z2Extents);
+//    z2Extents.transferFront(z1dist * scale, ptExtents);
+//    assert(ptExtents.size() > 0);
+// //   cout << "to" << endl;
+// //   cout << ptExtents.toString() << z2Extents.toString();
+//    pt.Z = ptExtents.toClipperInt();
 }
 
 void flatColorOffsetCallback(int step, int steps, ClipperLib::IntPoint& source, ClipperLib::IntPoint& dest) {
-    ColorExtentsRef newRef = ExtentsManager::inst().create();
-    if (step > 0) {
-        const Color *color = std::prev(ColorExtentsRef(source.Z).end())->color;
-        newRef.addExtent(color, 1.0f);
-    } else {
-        ColorExtentsRef baseRef(source.Z);
-        newRef.copyExtents(baseRef);
-    }
-    dest.Z = newRef.toClipperInt();
+    dest.Z = source.Z;
+//    ColorExtentsRef newRef = ExtentsManager::inst().create();
+//    if (step > 0) {
+//        const Color *color = std::prev(ColorExtentsRef(source.Z).end())->color;
+//        newRef.addExtent(color, 1.0f);
+//    } else {
+//        ColorExtentsRef baseRef(source.Z);
+//        newRef.copyExtents(baseRef);
+//    }
+//    dest.Z = newRef.toClipperInt();
 }
 
 // ---------------- class ColorExtentsRef ---------------

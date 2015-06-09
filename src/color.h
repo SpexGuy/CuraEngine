@@ -148,7 +148,9 @@ private:
     const ColorIterator createColor(const Color &c);
 };
 
-void flatColorCallback(ClipperLib::IntPoint& z1, ClipperLib::IntPoint& z2, ClipperLib::IntPoint& pt);
+void flatColorCallback(ClipperLib::IntPoint& e1bot, ClipperLib::IntPoint& e1top,
+                       ClipperLib::IntPoint& e2bot, ClipperLib::IntPoint& e2top,
+                       ClipperLib::IntPoint& pt);
 void flatColorOffsetCallback(int step, int steps, ClipperLib::IntPoint& source, ClipperLib::IntPoint& dest);
 
 }//namespace cura

@@ -283,7 +283,7 @@ private:
         
         //carveMultipleVolumes(storage.volumes);
         generateMultipleVolumesOverlap(storage.volumes, config.multiVolumeOverlap);
-        //dumpLayerparts(storage, "./output.html");
+        dumpLayerparts(storage, "./output.html");
         if (config.simpleMode)
         {
             for(unsigned int layerNr=0; layerNr<totalLayers; layerNr++)
@@ -389,6 +389,8 @@ private:
         generateRaft(storage, config.raftMargin);
 
         sendPolygonsToGui("skirt", 0, config.initialLayerThickness, storage.skirt);
+
+        dumpLayerparts(storage, "./final.html");
     }
 
     void writeGCode(SliceDataStorage& storage)

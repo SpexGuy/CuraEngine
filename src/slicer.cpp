@@ -378,13 +378,13 @@ Slicer::Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool kee
         }
     }
     
-    //dumpNonPolySegsToHtml("nonPolySlicerDump.html");
+    dumpNonPolySegsToHtml("slicerseg.html");
  
     for(unsigned int layerNr=0; layerNr<layers.size(); layerNr++)
     {
         layers[layerNr].makePolygons(ov, keepNoneClosed, extensiveStitching);
     }
-    //dumpSegmentsToHTML("slicerDump.html");
+    dumpSegmentsToHTML("slicedpoly.html");
 }
 
 void Slicer::dumpNonPolySegsToHtml(const char* filename)

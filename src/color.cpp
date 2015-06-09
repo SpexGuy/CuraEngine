@@ -17,7 +17,7 @@ void flatColorCallback(ClipperLib::IntPoint& e1bot, ClipperLib::IntPoint& e1top,
                        ClipperLib::IntPoint& e2bot, ClipperLib::IntPoint& e2top,
                        ClipperLib::IntPoint& pt) {
     //TODO: This is totally wrong.
-    pt.Z = e1top.Z;
+    pt.Z = e1bot.Z;
 //    assert(z2.Z);
 //    float z1dist = sqrt(vSize2f(pt-z1));
 //    float zdist = sqrt(vSize2f(z2-z1));

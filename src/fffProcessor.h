@@ -63,44 +63,35 @@ public:
                     size += ColorExtentsRef(p.Z).size();
             }
 
-            guiSocket.sendNr(polygon.size());
+            guiSocket.sendNr(size);
             for(unsigned int c = 0; c < polygon.size(); c++) {
                 Point p = polygon[c];
                 // calculate and send intermediate points (at color transitions)
                 if (c != 0 && p.Z) {
-                    Point fromP = polygon[c-1];
                     ColorExtentsRef extents(p.Z);
-                    if (extents.size() > 0) {
-                        float totalLength = vSize(p - fromP);
-                        float distance = 0;
-                        for (auto iter = extents.begin(), stop = std::prev(extents.end()); iter != stop; iter++) {
-                            const ColorExtent &ext = *iter;
-                            distance += ext.length;
-                            float z = distance / totalLength;
-                            Point midPoint = fromP*(1.0f-z) + p*z;
-                            guiSocket.sendAll(&midPoint.X, sizeof(midPoint.X));
-                            guiSocket.sendAll(&midPoint.Y, sizeof(midPoint.Y));
-                        }
-                    } else {
-                        //fuck. Why do we have a valid but empty extent?
-                        assert(false);
+                    assert(extents.size() > 0);
+                    float len = extents.getLength();
+                    float distance = 0;
+                    for (auto iter = extents.begin(), stop = std::prev(extents.end()); iter != stop; iter++) {
+                        distance += iter->length;
+                        float z = distance / len;
+                        Point midPoint = polygon[c-1]*(1.0f-z) + p*z;
+                        guiSocket.sendAll(&midPoint.X, sizeof(midPoint.X));
+                        guiSocket.sendAll(&midPoint.Y, sizeof(midPoint.Y));
                     }
                 }
                 //then send the actual point
                 guiSocket.sendAll(&p.X, sizeof(p.X));
                 guiSocket.sendAll(&p.Y, sizeof(p.Y));
             }
-            bool first = true;
             for(Point p : polygon) {
-                if (!p.Z || first) {
+                if (!p.Z) {
                     guiSocket.sendAll(ColorCache::badColor, sizeof(Color));
                 } else {
-                    ColorExtentsRef extents(p.Z);
-                    for (ColorExtent &ext : extents) {
+                    for (ColorExtent &ext : ColorExtentsRef(p.Z)) {
                         guiSocket.sendAll(ext.color, sizeof(Color));
                     }
                 }
-                first = false;
             }
         }
     }

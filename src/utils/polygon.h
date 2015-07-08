@@ -244,6 +244,7 @@ public:
     {
         Polygons ret;
         ClipperLib::Clipper clipper(clipper_init);
+        clipper.PreserveCollinear(true);
         clipper.Callback(&ExtentsManager::inst());
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         clipper.AddPaths(other.polygons, ClipperLib::ptClip, true);
@@ -254,6 +255,7 @@ public:
     {
         Polygons ret;
         ClipperLib::Clipper clipper(clipper_init);
+        clipper.PreserveCollinear(true);
         clipper.Callback(&ExtentsManager::inst());
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         clipper.AddPaths(other.polygons, ClipperLib::ptSubject, true);
@@ -264,6 +266,7 @@ public:
     {
         Polygons ret;
         ClipperLib::Clipper clipper(clipper_init);
+        clipper.PreserveCollinear(true);
         clipper.Callback(&ExtentsManager::inst());
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         clipper.AddPaths(other.polygons, ClipperLib::ptClip, true);
@@ -284,6 +287,7 @@ public:
     {
         vector<Polygons> ret;
         ClipperLib::Clipper clipper(clipper_init);
+        clipper.PreserveCollinear(true);
         clipper.Callback(&ExtentsManager::inst());
         ClipperLib::PolyTree resultPolyTree;
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
@@ -332,6 +336,7 @@ public:
     {
         Polygons ret;
         ClipperLib::Clipper clipper(clipper_init);
+        clipper.PreserveCollinear(true);
         clipper.Callback(&ExtentsManager::inst());
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         clipper.Execute(ClipperLib::ctUnion, ret.polygons);

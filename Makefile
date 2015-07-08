@@ -6,11 +6,11 @@ BUILD_DIR = build
 SRC_DIR = src
 LIBS_DIR = libs
 
-BUILD_TYPE = RELEASE
+BUILD_TYPE = DEBUG
 
 VERSION ?= DEV
 CXX ?= g++
-CFLAGS += -c -Wall -Wextra -Wold-style-cast -Woverloaded-virtual -std=c++11 -DVERSION=\"$(VERSION)\" -isystem libs
+CFLAGS += -c -Wall -Wextra -Woverloaded-virtual -std=c++11 -DVERSION=\"$(VERSION)\" -isystem libs
 
 ifeq ($(BUILD_TYPE),DEBUG)
 	CFLAGS+=-ggdb -Og -g
@@ -38,8 +38,8 @@ EXECUTABLE = $(BUILD_DIR)/CuraEngine
 ifeq ($(OS),Windows_NT)
 	#For windows make it large address aware, which allows the process to use more then 2GB of memory.
 	EXECUTABLE := $(EXECUTABLE).exe
-	CFLAGS += -march=pentium4 -flto
-	LDFLAGS += -Wl,--large-address-aware -lm -lwsock32 -flto
+	CFLAGS += -flto
+	LDFLAGS += -Wl,-lm -lwsock32 -flto
 	MKDIR_PREFIX = mkdir -p
 else
 	MKDIR_PREFIX = mkdir -p
@@ -84,6 +84,9 @@ test: $(EXECUTABLE)
 ## clean stuff
 clean:
 	rm -f $(EXECUTABLE) $(OBJECTS) $(BUILD_DIR)/libclipper.a
+
+install: all
+	cp $(EXECUTABLE) ../Cura
 
 help:
 	@cat Makefile |grep \#\#| grep \: |cut -d\# -f3

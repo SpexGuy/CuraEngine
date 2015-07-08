@@ -3,9 +3,10 @@
 #define COLOR_H
 
 #include <set>
-#include "../libs/clipper/clipper.hpp"
+#include <clipper/clipper.hpp>
 
 namespace cura {
+extern ClipperLib::FollowingZFill colorFill;
 
 class ColorCache;
 

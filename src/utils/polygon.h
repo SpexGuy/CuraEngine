@@ -6,6 +6,7 @@
 #include <float.h>
 using std::vector;
 #include <clipper/clipper.hpp>
+#include "../color.h"
 
 #include "intpoint.h"
 
@@ -18,7 +19,7 @@ using std::vector;
 
 namespace cura {
 
-const static int clipper_init = (0);
+const static int clipper_init = (ClipperLib::ioPreserveCollinear);
 #define NO_INDEX (std::numeric_limits<unsigned int>::max())
 
 class PolygonRef
@@ -71,6 +72,7 @@ public:
 
     void reverse()
     {
+        colorFill.OnReversePath(*polygon);
         ClipperLib::ReversePath(*polygon);
     }
 
@@ -244,7 +246,7 @@ public:
     {
         Polygons ret;
         ClipperLib::Clipper clipper(clipper_init);
-        clipper.ZFillFunction(flatColorCallback);
+        clipper.Callback(&colorFill);
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         clipper.AddPaths(other.polygons, ClipperLib::ptClip, true);
         clipper.Execute(ClipperLib::ctDifference, ret.polygons);
@@ -254,7 +256,7 @@ public:
     {
         Polygons ret;
         ClipperLib::Clipper clipper(clipper_init);
-        clipper.ZFillFunction(flatColorCallback);
+        clipper.Callback(&colorFill);
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         clipper.AddPaths(other.polygons, ClipperLib::ptSubject, true);
         clipper.Execute(ClipperLib::ctUnion, ret.polygons, ClipperLib::pftNonZero, ClipperLib::pftNonZero);
@@ -264,7 +266,7 @@ public:
     {
         Polygons ret;
         ClipperLib::Clipper clipper(clipper_init);
-        clipper.ZFillFunction(flatColorCallback);
+        clipper.Callback(&colorFill);
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         clipper.AddPaths(other.polygons, ClipperLib::ptClip, true);
         clipper.Execute(ClipperLib::ctIntersection, ret.polygons);
@@ -274,8 +276,7 @@ public:
     {
         Polygons ret;
         ClipperLib::ClipperOffset clipper;
-        clipper.ZFillFunction(flatColorCallback);
-        clipper.ZOffsetFunction(flatColorOffsetCallback);
+        clipper.Callback(&colorFill);
         clipper.AddPaths(polygons, ClipperLib::jtMiter, ClipperLib::etClosedPolygon);
         clipper.MiterLimit = 2.0;
         clipper.Execute(ret.polygons, distance);
@@ -285,7 +286,7 @@ public:
     {
         vector<Polygons> ret;
         ClipperLib::Clipper clipper(clipper_init);
-        clipper.ZFillFunction(flatColorCallback);
+        clipper.Callback(&colorFill);
         ClipperLib::PolyTree resultPolyTree;
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         if (unionAll)
@@ -317,7 +318,7 @@ public:
     {
         Polygons ret;
         ClipperLib::Clipper clipper(clipper_init);
-        clipper.ZFillFunction(flatColorCallback);
+        clipper.Callback(&colorFill);
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         clipper.Execute(ClipperLib::ctUnion, ret.polygons);
         return ret;

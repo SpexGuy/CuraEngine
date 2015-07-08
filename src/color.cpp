@@ -3,14 +3,7 @@
 #include "color.h"
 
 namespace cura {
-
-void flatColorCallback(ClipperLib::IntPoint& z1, ClipperLib::IntPoint& z2, ClipperLib::IntPoint& pt) {
-    pt.Z = z1.Z;
-}
-
-void flatColorOffsetCallback(int step, int steps, ClipperLib::IntPoint& source, ClipperLib::IntPoint& dest) {
-    dest.Z = source.Z;
-}
+ClipperLib::FollowingZFill colorFill;
 
 // ---------------- class ColorCache --------------------
 ColorCache ColorCache::instance;

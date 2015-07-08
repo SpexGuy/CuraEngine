@@ -70,11 +70,11 @@ void writePolygons(FILE* out, Polygons &poly, Point3 &offset, Point3 &scale) {
         for(unsigned int k=0;k<p.size();k++) {
             Point from = p[prev];
             ColorExtentsRef extents(p[k].Z);
-            float len = extents.getLength();
-            float distance = 0;
-            for (ColorExtent &ext : extents) {
+            cInt len = extents->getLength();
+            cInt distance = 0;
+            for (ColorExtent &ext : *extents) {
                 distance += ext.length;
-                float z = distance / len;
+                float z = float(distance) / len;
                 Point to = p[prev]*(1-z) + p[k]*z;
                 fprintf(out, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(ext.color->r*255), int(ext.color->g*255), int(ext.color->b*255));
                 fprintf(out, "M %f,%f L %f,%f \" style=\"fill:%s;\"/>", float(from.X - offset.x)/scale.x*500, float(from.Y - offset.y)/scale.y*500, float(to.X - offset.x)/scale.x*500, float(to.Y - offset.y)/scale.y*500, j == 0 ? "gray" : "red");

@@ -244,7 +244,7 @@ public:
     {
         Polygons ret;
         ClipperLib::Clipper clipper(clipper_init);
-        clipper.ZFillFunction(flatColorCallback);
+        clipper.Callback(&ExtentsManager::inst());
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         clipper.AddPaths(other.polygons, ClipperLib::ptClip, true);
         clipper.Execute(ClipperLib::ctDifference, ret.polygons);
@@ -254,7 +254,7 @@ public:
     {
         Polygons ret;
         ClipperLib::Clipper clipper(clipper_init);
-        clipper.ZFillFunction(flatColorCallback);
+        clipper.Callback(&ExtentsManager::inst());
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         clipper.AddPaths(other.polygons, ClipperLib::ptSubject, true);
         clipper.Execute(ClipperLib::ctUnion, ret.polygons, ClipperLib::pftNonZero, ClipperLib::pftNonZero);
@@ -264,7 +264,7 @@ public:
     {
         Polygons ret;
         ClipperLib::Clipper clipper(clipper_init);
-        clipper.ZFillFunction(flatColorCallback);
+        clipper.Callback(&ExtentsManager::inst());
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         clipper.AddPaths(other.polygons, ClipperLib::ptClip, true);
         clipper.Execute(ClipperLib::ctIntersection, ret.polygons);
@@ -274,8 +274,7 @@ public:
     {
         Polygons ret;
         ClipperLib::ClipperOffset clipper;
-        clipper.ZFillFunction(flatColorCallback);
-        clipper.ZOffsetFunction(flatColorOffsetCallback);
+        clipper.Callback(&ExtentsManager::inst());
         clipper.AddPaths(polygons, ClipperLib::jtMiter, ClipperLib::etClosedPolygon);
         clipper.MiterLimit = 2.0;
         clipper.Execute(ret.polygons, distance);
@@ -285,7 +284,7 @@ public:
     {
         vector<Polygons> ret;
         ClipperLib::Clipper clipper(clipper_init);
-        clipper.ZFillFunction(flatColorCallback);
+        clipper.Callback(&ExtentsManager::inst());
         ClipperLib::PolyTree resultPolyTree;
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         if (unionAll)
@@ -295,6 +294,22 @@ public:
 
         _processPolyTreeNode(&resultPolyTree, ret);
         return ret;
+    }
+    ClipperLib::Paths::iterator begin() {
+        return polygons.begin();
+    }
+    ClipperLib::Paths::const_iterator begin() const {
+        return polygons.begin();
+    }
+    ClipperLib::Paths::iterator end() {
+        return polygons.end();
+    }
+    ClipperLib::Paths::const_iterator end() const {
+        return polygons.end();
+    }
+    friend std::ostream &operator<<(std::ostream &out, const Polygons &self) {
+        out << self.polygons;
+        return out;
     }
 private:
     void _processPolyTreeNode(ClipperLib::PolyNode* node, vector<Polygons>& ret) const
@@ -317,7 +332,7 @@ public:
     {
         Polygons ret;
         ClipperLib::Clipper clipper(clipper_init);
-        clipper.ZFillFunction(flatColorCallback);
+        clipper.Callback(&ExtentsManager::inst());
         clipper.AddPaths(polygons, ClipperLib::ptSubject, true);
         clipper.Execute(ClipperLib::ctUnion, ret.polygons);
         return ret;

@@ -315,6 +315,7 @@ void SlicerLayer::makePolygons(OptimizedVolume* ov, bool keepNoneClosed, bool ex
 
 Slicer::Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool keepNoneClosed, bool extensiveStitching)
 {
+    cura::logError("Start slice");
     modelSize = ov->model->modelSize;
     modelMin = ov->model->vMin;
     
@@ -371,8 +372,8 @@ Slicer::Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool kee
             s.addedToPolygon = false;
 
             // Copy color from optimized face to the segment points
-            ColorExtentsRef newExt = ExtentsManager::inst().create();
-            newExt.addExtent(ov->faces[i].color, s.end.X - s.start.X, s.end.Y - s.start.Y);
+            ColorExtentsRef newExt = ExtentsManager::inst().create(s.start, s.end);
+            newExt->addExtent(ov->faces[i].color, s.start, s.end);
             s.end.Z = s.start.Z = newExt.toClipperInt();
             layers[layerNr].segmentList.push_back(s);
         }
@@ -385,6 +386,7 @@ Slicer::Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool kee
         layers[layerNr].makePolygons(ov, keepNoneClosed, extensiveStitching);
     }
     dumpSegmentsToHTML("slicedpoly.html");
+    cura::logError("End slice");
 }
 
 void Slicer::dumpNonPolySegsToHtml(const char* filename)
@@ -405,14 +407,13 @@ void Slicer::dumpNonPolySegsToHtml(const char* filename)
             assert(segment.start.Z);
             ColorExtentsRef extents(segment.start.Z);
             //TODO: this code shamelessly copied from fffProcessor.h::sendPolygonsToGui(..)
-            assert(extents.size() > 0);
-            float totalLength = extents.getLength();
-            float distance = 0;
+            assert(extents->size() > 0);
+            cInt totalLength = extents->getLength();
+            cInt distance = 0;
             Point from = segment.start;
-            for (auto iter = extents.begin(), stop = extents.end(); iter != stop; iter++) {
-                const ColorExtent &ext = *iter;
+            for (const ColorExtent &ext : *extents) {
                 distance += ext.length;
-                float z = distance / totalLength;
+                float z = float(distance) / totalLength;
                 Point to = segment.start*(1.0f-z) + segment.end*z;
                 fprintf(f, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(ext.color->r*255), int(ext.color->g*255), int(ext.color->b*255));
                 fprintf(f, "M %f,%f L %f,%f \"/>\n", float(from.X - modelMin.x)/scale, float(from.Y - modelMin.y)/scale, float(to.X - modelMin.x)/scale, float(to.Y - modelMin.y)/scale);
@@ -448,12 +449,12 @@ void Slicer::dumpSegmentsToHTML(const char* filename)
                 assert(p[n].Z);
                 ColorExtentsRef extents(p[n].Z);
                 //TODO: this code shamelessly copied from Slicer::dumpNonPolySegsToHtml which was copied from fffProcessor.h::sendPolygonsToGui(..)
-                assert(extents.size() > 0);
-                float totalLength = extents.getLength();
-                float distance = 0;
-                for (ColorExtent &ext : extents) {
+                assert(extents->size() > 0);
+                cInt totalLength = extents->getLength();
+                cInt distance = 0;
+                for (ColorExtent &ext : *extents) {
                     distance += ext.length;
-                    float z = distance / totalLength;
+                    float z = float(distance) / totalLength;
                     Point to = p[prev]*(1.0f-z) + p[n]*z;
                     fprintf(f, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(ext.color->r*255), int(ext.color->g*255), int(ext.color->b*255));
                     fprintf(f, "M %f,%f L %f,%f \"/>\n", float(from.X - modelMin.x)/scale, float(from.Y - modelMin.y)/scale, float(to.X - modelMin.x)/scale, float(to.Y - modelMin.y)/scale);

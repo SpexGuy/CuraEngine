@@ -1,5 +1,12 @@
 /** Copyright (C) 2013 David Braam - Released under terms of the AGPLv3 License */
 #include "skin.h"
+#include "utils/logoutput.h"
+
+#include <iostream>
+
+using std::cout;
+using std::endl;
+using ClipperLib::Path;
 
 namespace cura {
 
@@ -17,7 +24,47 @@ void generateSkins(int layerNr, SliceVolumeStorage& storage, int extrusionWidth,
         if (part->insets.size() > 1)
         {
             //Add thin wall filling by taking the area between the insets.
-            Polygons thinWalls = part->insets[0].offset(-extrusionWidth / 2 - extrusionWidth * infillOverlap / 100).difference(part->insets[1].offset(extrusionWidth * 6 / 10));
+            logError("Offsetting thin walls 1\n");
+            Polygons part1 = part->insets[0].offset(-extrusionWidth / 2 - extrusionWidth * infillOverlap / 100);
+            cout << "Generated " << part1.size() << " polys" << endl;
+            for (const Path &poly : part1) {
+                cout << "  Poly(" << poly.size() << ")" << endl;
+                for (const Point &p : poly) {
+                    cout << "    (" << p.X << "," << p.Y << ", ";
+                    if (p.Z) {
+                        cout << "{ ";
+                        for (const ColorExtent &ext : *ColorExtentsRef(p.Z)) {
+                            cout << "((" << ext.color->r << "," << ext.color->g << "," << ext.color->b << "), " << ext.length << ") ";
+                        }
+                        cout << "}";
+                    } else {
+                        cout << "NULL";
+                    }
+                    cout << ")" << endl;
+                }
+            }
+            logError("Offsetting thin walls 2\n");
+            Polygons part2 = part->insets[1].offset(extrusionWidth * 6 / 10);
+            cout << "Generated " << part2.size() << " polys" << endl;
+            for (const Path &poly : part2) {
+                cout << "  Poly(" << poly.size() << ")" << endl;
+                for (const Point &p : poly) {
+                    cout << "    (" << p.X << "," << p.Y << ", ";
+                    if (p.Z) {
+                        cout << "{ ";
+                        for (const ColorExtent &ext : *ColorExtentsRef(p.Z)) {
+                            cout << "((" << ext.color->r << "," << ext.color->g << "," << ext.color->b << "), " << ext.length << ") ";
+                        }
+                        cout << "}";
+                    } else {
+                        cout << "NULL";
+                    }
+                    cout << ")" << endl;
+                }
+            }
+            logError("Differencing thin walls\n");
+            Polygons thinWalls = part1.difference(part2);
+            logError("Did thin walls\n");
             upskin.add(thinWalls);
             downskin.add(thinWalls);
         }

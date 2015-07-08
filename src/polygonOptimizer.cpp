@@ -30,10 +30,19 @@ void optimizePolygon(PolygonRef poly)
             if (d < -99999999999999LL)
             {
                 // removing p1, so move its color extents into p2
-                ColorExtentsRef p1Colors(p1.Z);
-                ColorExtentsRef(p2.Z).premoveExtents(p1Colors);
-                poly.remove(i);
-                i --;
+                bool remove = true;
+                if (p1.Z && p2.Z) {
+                    ColorExtentsRef p1Colors(p1.Z);
+                    ColorExtentsRef p2Colors(p2.Z);
+                    if (p2Colors->canCombine(*p1Colors))
+                        p2Colors->preMoveExtents(*p1Colors);
+                    else
+                        remove = false;
+                }
+                if (remove) {
+                    poly.remove(i);
+                    i --;
+                }
             }else{
                 p0 = p1;
             }

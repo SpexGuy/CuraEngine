@@ -213,8 +213,8 @@ void GCodeExport::writeDelay(double timeAmount)
 void GCodeExport::writeColors(Point p, float extrusion) {
     if (p.Z) {
         ColorExtentsRef extents(p.Z);
-        float scale = extrusion / extents.getLength();
-        for (ColorExtent &ext : extents) {
+        double scale = extrusion / extents->getLength();
+        for (ColorExtent &ext : *extents) {
             writeComment(";;COLOR;;;C1 R%f G%f B%f E%f", ext.color->r, ext.color->g, ext.color->b, ext.length * scale);
         }
     } else {

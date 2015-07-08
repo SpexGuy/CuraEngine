@@ -60,7 +60,7 @@ public:
                 if (!p.Z)
                     size += 1;
                 else
-                    size += ColorExtentsRef(p.Z).size();
+                    size += ColorExtentsRef(p.Z)->size();
             }
 
             guiSocket.sendNr(size);
@@ -69,12 +69,12 @@ public:
                 // calculate and send intermediate points (at color transitions)
                 if (c != 0 && p.Z) {
                     ColorExtentsRef extents(p.Z);
-                    assert(extents.size() > 0);
-                    float len = extents.getLength();
-                    float distance = 0;
-                    for (auto iter = extents.begin(), stop = std::prev(extents.end()); iter != stop; iter++) {
+                    assert(extents->size() > 0);
+                    cInt len = extents->getLength();
+                    cInt distance = 0;
+                    for (auto iter = extents->begin(), stop = std::prev(extents->end()); iter != stop; iter++) {
                         distance += iter->length;
-                        float z = distance / len;
+                        float z = float(distance) / len;
                         Point midPoint = polygon[c-1]*(1.0f-z) + p*z;
                         guiSocket.sendAll(&midPoint.X, sizeof(midPoint.X));
                         guiSocket.sendAll(&midPoint.Y, sizeof(midPoint.Y));
@@ -88,7 +88,7 @@ public:
                 if (!p.Z) {
                     guiSocket.sendAll(ColorCache::badColor, sizeof(Color));
                 } else {
-                    for (ColorExtent &ext : ColorExtentsRef(p.Z)) {
+                    for (ColorExtent &ext : *ColorExtentsRef(p.Z)) {
                         guiSocket.sendAll(ext.color, sizeof(Color));
                     }
                 }
@@ -252,7 +252,6 @@ private:
         storage.modelMin = optimizedModel->vMin;
         storage.modelMax = optimizedModel->vMax;
         delete optimizedModel;
-
         cura::log("Generating layer parts...\n");
         for(unsigned int volumeIdx=0; volumeIdx < slicerList.size(); volumeIdx++)
         {
@@ -273,8 +272,11 @@ private:
         const unsigned int totalLayers = storage.volumes[0].layers.size();
         
         //carveMultipleVolumes(storage.volumes);
+        cura::log("Generate overlap\n");
         generateMultipleVolumesOverlap(storage.volumes, config.multiVolumeOverlap);
+        cura::log("dumpLayerparts\n");
         dumpLayerparts(storage, "./output.html");
+        cura::log("did that...\n");
         if (config.simpleMode)
         {
             for(unsigned int layerNr=0; layerNr<totalLayers; layerNr++)
@@ -290,7 +292,7 @@ private:
             }
             return;
         }
-
+        log("Generating insets...\n");
         for(unsigned int layerNr=0; layerNr<totalLayers; layerNr++)
         {
             for(unsigned int volumeIdx=0; volumeIdx<storage.volumes.size(); volumeIdx++)
@@ -316,6 +318,7 @@ private:
             }
             cura::logProgress("inset",layerNr+1,totalLayers);
         }
+        logError("Done\n");
         if (config.enableOozeShield)
         {
             for(unsigned int layerNr=0; layerNr<totalLayers; layerNr++)
@@ -339,8 +342,9 @@ private:
             for(unsigned int layerNr=totalLayers-1; layerNr>0; layerNr--)
                 storage.oozeShield[layerNr-1] = storage.oozeShield[layerNr-1].unionPolygons(storage.oozeShield[layerNr].offset(-offsetAngle));
         }
-        cura::log("Generated inset in %5.3fs\n", timeKeeper.restart());
+        cura::logError("Generated inset in %5.3fs\n", timeKeeper.restart());
 
+        logError("Generating skin\n");
         for(unsigned int layerNr=0; layerNr<totalLayers; layerNr++)
         {
             if (!config.spiralizeMode || static_cast<int>(layerNr) < config.downSkinCount)    //Only generate up/downskin and infill for the first X layers when spiralize is choosen.
@@ -350,8 +354,11 @@ private:
                     int extrusionWidth = config.extrusionWidth;
                     if (layerNr == 0)
                         extrusionWidth = config.layer0extrusionWidth;
+                    logError("generateSkins(%d, %d)\n", volumeIdx, layerNr);
                     generateSkins(layerNr, storage.volumes[volumeIdx], extrusionWidth, config.downSkinCount, config.upSkinCount, config.infillOverlap);
+                    logError("generateSparse(%d, %d)\n", volumeIdx, layerNr);
                     generateSparse(layerNr, storage.volumes[volumeIdx], extrusionWidth, config.downSkinCount, config.upSkinCount);
+                    logError("sendPolygons(%d, %d)\n", volumeIdx, layerNr);
 
                     SliceLayer* layer = &storage.volumes[volumeIdx].layers[layerNr];
                     for(unsigned int partNr=0; partNr<layer->parts.size(); partNr++)

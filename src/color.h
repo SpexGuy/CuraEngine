@@ -9,10 +9,9 @@
 #include <assert.h>
 #include "../libs/clipper/clipper.hpp"
 
-namespace cura {
+using ClipperLib::cInt;
 
-class ColorCache;
-class ColorExtents;
+namespace cura {
 
 class Color
 {
@@ -31,9 +30,9 @@ private:
 
 struct ColorExtent {
     const Color *color;
-    float length;
+    ClipperLib::cInt length;
 
-    ColorExtent(const Color *color, float length) : color(color), length(length) {}
+    ColorExtent(const Color *color, ClipperLib::cInt length) : color(color), length(length) {}
 };
 
 struct ColorComparator {
@@ -48,60 +47,22 @@ struct ColorComparator {
     }
 };
 
-class ColorExtentsRef
+class ColorExtents
 {
 public:
     typedef std::list<ColorExtent>::iterator iterator;
     typedef std::list<ColorExtent>::const_iterator const_iterator;
 
-    ColorExtentsRef(ColorExtents *ref)  : soul(ref) {}
-    ColorExtentsRef(ClipperLib::cInt z) : soul(reinterpret_cast<ColorExtents *>(z)) {assert(soul);}
-    void operator=(const ColorExtentsRef &other) {soul = other.soul;}
-    void addExtent(const Color *color, float dx, float dy);
-    void addExtent(const Color *color, float length);
-    void moveExtents(std::list<ColorExtent> &additions);
-    void moveExtents(ColorExtents *other);
-    void moveExtents(ColorExtentsRef &other);
-    void premoveExtents(std::list<ColorExtent> &additions);
-    void premoveExtents(ColorExtents *other);
-    void premoveExtents(ColorExtentsRef &other);
-    void copyExtents(ColorExtentsRef &other);
+    void addExtent(const Color *color, const ClipperLib::IntPoint &p1, const ClipperLib::IntPoint &p2);
+    void transferFront(ClipperLib::cInt distance, ColorExtents &other);
+    void preMoveExtents(ColorExtents &other);
     void reverse();
-    //void resize(float distance);
-    float getLength();
-    void transferFront(float distance, ColorExtentsRef &other);
-    iterator begin();
-    iterator end();
-    const_iterator begin() const;
-    const_iterator end() const;
-    unsigned int size() const;
-    ColorExtents *getReference() const {return soul;}
-    ClipperLib::cInt toClipperInt() const {return reinterpret_cast<ClipperLib::cInt>(soul);}
-    std::string toString() const;
-
-private:
-    ColorExtents *soul;
-};
-
-class ColorExtents : public ColorExtentsRef
-{
-public:
-    typedef std::list<ColorExtent>::iterator iterator;
-    typedef std::list<ColorExtent>::const_iterator const_iterator;
-
-    void addExtent(const Color *color, float dx, float dy);
-    void addExtent(const Color *color, float length);
-    void moveExtents(std::list<ColorExtent> &additions);
-    void moveExtents(ColorExtents *other);
-    void moveExtents(ColorExtentsRef &other);
-    void premoveExtents(std::list<ColorExtent> &additions);
-    void premoveExtents(ColorExtents *other);
-    void premoveExtents(ColorExtentsRef &other);
-    void copyExtents(ColorExtents *other);
-    void reverse();
-    //void resize(float distance);
-    void transferFront(float distance, ColorExtentsRef &other);
-    float getLength() {return totalLength;}
+    void resize(const ClipperLib::IntPoint &p1, const ClipperLib::IntPoint &p2);
+    inline bool canCombine(const ColorExtents &other) {return other.useX == useX;}
+    inline ClipperLib::cInt getLength() const {return totalLength;}
+    inline ClipperLib::cInt intDistance(const ClipperLib::IntPoint &p1, const ClipperLib::IntPoint &p2) const {
+        return abs(useX ? p1.X - p2.X : p1.Y - p2.Y);
+    }
     iterator begin() {return extents.begin();}
     iterator end() {return extents.end();}
     const_iterator begin() const {return extents.begin();}
@@ -110,19 +71,50 @@ public:
     std::string toString() const;
 
 private:
-    ColorExtents() : ColorExtentsRef(this), totalLength(0.0f) {}
+    ColorExtents(const ClipperLib::IntPoint &from, const ClipperLib::IntPoint &to)
+      : totalLength(0),
+        useX(abs(to.X - from.X) > abs(to.Y - from.Y)) {}
+    ColorExtents(const ColorExtents &other)
+      : extents(other.extents),
+        totalLength(other.totalLength),
+        useX(other.useX) {}
+    ColorExtents(bool useX)
+      : totalLength(0),
+        useX(useX) {}
     std::list<ColorExtent> extents;
-    float totalLength;
+    ClipperLib::cInt totalLength;
+    bool useX;
 
     friend class ExtentsManager; // only an ExtentsManager can create a ColorExtents
 };
 
-class ExtentsManager
+class ColorExtentsRef
 {
 public:
+    ColorExtentsRef(ColorExtents *ref)  : soul(ref) {}
+    ColorExtentsRef(ClipperLib::cInt z) : soul(reinterpret_cast<ColorExtents *>(z)) {assert(soul);}
+    ClipperLib::cInt toClipperInt() const {return reinterpret_cast<ClipperLib::cInt>(soul);}
+    ColorExtents       &operator*()       {return *soul;}
+    ColorExtents const &operator*() const {return *soul;}
+    ColorExtents       *operator->()       {return soul;}
+    ColorExtents const *operator->() const {return soul;}
+
+private:
+    ColorExtents *soul;
+};
+
+class ExtentsManager : public ClipperLib::FollowingZFill {
+public:
     static ExtentsManager& inst();
-    ColorExtentsRef create();
+    ColorExtentsRef create(const ClipperLib::IntPoint &p1, const ClipperLib::IntPoint &p2);
+    ColorExtentsRef clone(const ColorExtentsRef &other);
+    ColorExtentsRef empty_like(const ColorExtentsRef &proto);
     ~ExtentsManager();
+
+    virtual void OnFinishOffset(ClipperLib::Path &poly) override;
+    virtual ClipperLib::cInt Clone(ClipperLib::cInt z) override;
+    virtual void ReverseZ(ClipperLib::cInt z) override;
+    virtual ClipperLib::cInt StripBegin(ClipperLib::cInt z, const ClipperLib::IntPoint &from, const ClipperLib::IntPoint &to, const ClipperLib::IntPoint &pt);
 
 private:
     static ExtentsManager instance;
@@ -147,11 +139,6 @@ private:
     ColorSet cache;
     const ColorIterator createColor(const Color &c);
 };
-
-void flatColorCallback(ClipperLib::IntPoint& e1bot, ClipperLib::IntPoint& e1top,
-                       ClipperLib::IntPoint& e2bot, ClipperLib::IntPoint& e2top,
-                       ClipperLib::IntPoint& pt);
-void flatColorOffsetCallback(int step, int steps, ClipperLib::IntPoint& source, ClipperLib::IntPoint& dest);
 
 }//namespace cura
 

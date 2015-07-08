@@ -204,5 +204,4 @@ public:
         return Point(p.X * matrix[0] + p.Y * matrix[2], p.X * matrix[1] + p.Y * matrix[3], p.Z);
     }
 };
-
 #endif//INT_POINT_H

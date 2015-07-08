@@ -226,15 +226,11 @@ private:
         delete optimizedModel;
 
         cura::log("Generating layer parts...\n");
-        for(unsigned int volumeIdx=0; volumeIdx < slicerList.size(); volumeIdx++)
+        for(unsigned int slicerIdx=0; slicerIdx < slicerList.size(); slicerIdx++)
         {
             storage.volumes.push_back(SliceVolumeStorage());
-            createLayerParts(storage.volumes[volumeIdx], slicerList[volumeIdx], config.fixHorrible & (FIX_HORRIBLE_UNION_ALL_TYPE_A | FIX_HORRIBLE_UNION_ALL_TYPE_B | FIX_HORRIBLE_UNION_ALL_TYPE_C));
-            delete slicerList[volumeIdx];
-
-            //Add the raft offset to each layer.
-            for(unsigned int layerNr=0; layerNr<storage.volumes[volumeIdx].layers.size(); layerNr++)
-                storage.volumes[volumeIdx].layers[layerNr].printZ += config.raftBaseThickness + config.raftInterfaceThickness;
+            createLayerParts(storage.volumes.back(), slicerList[slicerIdx], config.raftBaseThickness + config.raftInterfaceThickness, config.fixHorrible & (FIX_HORRIBLE_UNION_ALL_TYPE_A | FIX_HORRIBLE_UNION_ALL_TYPE_B | FIX_HORRIBLE_UNION_ALL_TYPE_C));
+            delete slicerList[slicerIdx];
         }
         cura::log("Generated layer parts in %5.3fs\n", timeKeeper.restart());
         return true;

@@ -14,11 +14,15 @@ Creating "parts" is an important step, as all elements in a single part should b
 And all every bit inside a single part can be printed without the nozzle leaving the boundery of this part.
 
 It's also the first step that stores the result in the "data storage" so all other steps can access it.
+
+COLOR:
+The color slicer uses LayerParts within an island, where each part is its own color.  This causes the extents
+of single colors to be grouped together without creating visible artifacts in the print.
 */
 
 namespace cura {
 
-void createLayerWithParts(SliceLayer& storageLayer, SlicerLayer* layer, int unionAllType)
+void createLayerWithParts(SliceLayer& storageLayer, SlicerLayer* layer, int colorDepth, int unionAllType)
 {
     storageLayer.openLines = layer->openPolygons;
 
@@ -39,25 +43,31 @@ void createLayerWithParts(SliceLayer& storageLayer, SlicerLayer* layer, int unio
         result = layer->polygonList.splitIntoParts(unionAllType);
     for(unsigned int i=0; i<result.size(); i++)
     {
-        storageLayer.parts.push_back(SliceLayerPart());
-        if (unionAllType & FIX_HORRIBLE_UNION_ALL_TYPE_C)
-        {
-            storageLayer.parts[i].outline.add(result[i][0]);
-            storageLayer.parts[i].outline = storageLayer.parts[i].outline.offset(-1000);
-        }else
-            storageLayer.parts[i].outline = result[i];
-        storageLayer.parts[i].boundaryBox.calculate(storageLayer.parts[i].outline);
+        vector<Polygons> colors = result[i].splitIntoColors(colorDepth);
+        for (Polygons &polys : colors) {
+            storageLayer.parts.emplace_back();
+            SliceLayerPart &part = storageLayer.parts.back();
+            if (unionAllType & FIX_HORRIBLE_UNION_ALL_TYPE_C) {
+                part.outline.add(polys[0]);
+                part.outline = part.outline.offset(-1000);
+            } else {
+                part.outline = polys;
+            }
+            part.boundaryBox.calculate(part.outline);
+        }
+        // TODO: Add another layer of indirection within LayerPart (ColorPart or something)
+        // TODO: Overlap colors from same contour like generateMultipleVolumesOverlap
     }
 }
 
-void createLayerParts(SliceVolumeStorage& storage, Slicer* slicer, int printZOffset, int unionAllType)
+void createLayerParts(SliceVolumeStorage& storage, Slicer* slicer, int printZOffset, int colorDepth, int unionAllType)
 {
     for(unsigned int layerNr = 0; layerNr < slicer->layers.size(); layerNr++)
     {
         storage.layers.push_back(SliceLayer());
         storage.layers[layerNr].sliceZ = slicer->layers[layerNr].z;
         storage.layers[layerNr].printZ = slicer->layers[layerNr].z + printZOffset;
-        createLayerWithParts(storage.layers[layerNr], &slicer->layers[layerNr], unionAllType);
+        createLayerWithParts(storage.layers[layerNr], &slicer->layers[layerNr], colorDepth, unionAllType);
     }
 }
 

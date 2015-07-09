@@ -242,6 +242,10 @@ public:
     Polygons() {}
     Polygons(const Polygons& other) { polygons = other.polygons; }
     Polygons& operator=(const Polygons& other) { polygons = other.polygons; return *this; }
+private:
+    Polygons(const ClipperLib::Paths &other) { polygons = other; }
+    Polygons& operator=(const ClipperLib::Paths &other) { polygons = other; return *this; }
+public:
     Polygons difference(const Polygons& other) const
     {
         Polygons ret;
@@ -282,6 +286,7 @@ public:
         clipper.Execute(ret.polygons, distance);
         return ret;
     }
+    vector<Polygons> splitIntoColors(int distance) const;
     vector<Polygons> splitIntoParts(bool unionAll = false) const
     {
         vector<Polygons> ret;

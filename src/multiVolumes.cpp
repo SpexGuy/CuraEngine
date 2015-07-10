@@ -52,7 +52,7 @@ void generateMultipleVolumesOverlap(vector<SliceVolumeStorage> &volumes, int ove
     }
 }
 
-void generateOverlap(Polygons outline, vector<SliceLayerPart> parts, int overlap) {
+void generateOverlap(const Polygons &outline, vector<SliceLayerPart> &parts, int overlap) {
     for(unsigned int p1 = 0; p1 < parts.size(); p1++)
     {
         parts[p1].outline = outline.intersection(parts[p1].outline.offset(overlap / 2));

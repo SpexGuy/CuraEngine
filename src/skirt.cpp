@@ -13,22 +13,21 @@ void generateSkirt(SliceDataStorage& storage, int distance, int extrusionWidth, 
         
         SupportPolyGenerator supportGenerator(storage.support, initialLayerHeight);
         Polygons skirtPolygons(storage.wipeTower.offset(offsetDistance));
-        for(unsigned int volumeIdx = 0; volumeIdx < storage.volumes.size(); volumeIdx++)
+        for(SliceVolumeStorage &volume : storage.volumes)
         {
-            if (storage.volumes[volumeIdx].layers.size() < 1) continue;
-            SliceLayer* layer = &storage.volumes[volumeIdx].layers[0];
-            for(unsigned int i=0; i<layer->parts.size(); i++)
+            if (volume.layers.size() < 1) continue;
+            for(SliceLayerIsland &island : volume.layers[0].islands)
             {
                 if (externalOnly)
                 {
                     Polygons p;
-                    p.add(layer->parts[i].outline[0]);
+                    p.add(island.outline[0]);
                     skirtPolygons = skirtPolygons.unionPolygons(p.offset(offsetDistance));
                 }
                 else
-                    skirtPolygons = skirtPolygons.unionPolygons(layer->parts[i].outline.offset(offsetDistance));
+                    skirtPolygons = skirtPolygons.unionPolygons(island.outline.offset(offsetDistance));
 
-                supportGenerator.polygons = supportGenerator.polygons.difference(layer->parts[i].outline);
+                supportGenerator.polygons = supportGenerator.polygons.difference(island.outline);
             }
         }
         

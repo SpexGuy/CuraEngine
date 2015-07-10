@@ -16,15 +16,26 @@ SliceData
 */
 namespace cura {
 
-class SliceLayerPart
+enum SliceIslandType { sitInfill, sitBorder };
+
+class SliceIslandRegion
 {
 public:
-    AABB boundaryBox;
+    SliceIslandType type; //TODO: Set and use this
+    const Color *color; //TODO: Set and use this
     Polygons outline;
-    Polygons combBoundery;
+    Polygons combBoundary;
     vector<Polygons> insets;
     Polygons skinOutline;
     Polygons sparseOutline;
+};
+
+class SliceLayerIsland
+{
+public:
+    AABB boundaryBox; //This is used by Bridge. Do regions need one also?
+    Polygons outline;
+    vector<SliceIslandRegion> regions;
 };
 
 class SliceLayer
@@ -32,7 +43,7 @@ class SliceLayer
 public:
     int sliceZ;
     int printZ;
-    vector<SliceLayerPart> parts;
+    vector<SliceLayerIsland> islands;
     Polygons openLines;
 };
 

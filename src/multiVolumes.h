@@ -11,7 +11,7 @@ namespace cura {
 
 void carveMultipleVolumes(vector<SliceVolumeStorage> &volumes);
 
-void generateOverlap(const Polygons &outline, vector<SliceLayerPart> &parts, int overlap);
+void generateOverlap(const Polygons &boundOutline, Polygons &partOutline, int overlap);
 
 //Expand each layer a bit and then keep the extra overlapping parts that overlap with other volumes.
 //This generates some overlap in dual extrusion, for better bonding in touching parts.

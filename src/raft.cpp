@@ -6,13 +6,13 @@ namespace cura {
 
 void generateRaft(SliceDataStorage& storage, int distance)
 {
-    for(unsigned int volumeIdx = 0; volumeIdx < storage.volumes.size(); volumeIdx++)
+    for(SliceVolumeStorage &volume : storage.volumes)
     {
-        if (storage.volumes[volumeIdx].layers.size() < 1) continue;
-        SliceLayer* layer = &storage.volumes[volumeIdx].layers[0];
-        for(unsigned int i=0; i<layer->parts.size(); i++)
+        if (volume.layers.size() < 1) continue;
+        SliceLayer &layer = volume.layers[0];
+        for(SliceLayerIsland &island : layer.islands)
         {
-            storage.raftOutline = storage.raftOutline.unionPolygons(layer->parts[i].outline.offset(distance));
+            storage.raftOutline = storage.raftOutline.unionPolygons(island.outline.offset(distance));
         }
     }
 

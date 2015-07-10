@@ -6,7 +6,7 @@
 
 namespace cura {
 
-void generateInsets(SliceLayerPart* part, int offset, int insetCount);
+void generateInsets(SliceIslandRegion* part, int offset, int insetCount);
 
 void generateInsets(SliceLayer* layer, int offset, int insetCount);
 

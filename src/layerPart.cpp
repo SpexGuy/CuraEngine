@@ -44,22 +44,25 @@ void createLayerWithParts(SliceLayer& storageLayer, SlicerLayer* layer, int colo
         result = layer->polygonList.splitIntoParts(unionAllType);
     for(unsigned int i=0; i<result.size(); i++)
     {
-        vector<Polygons> colors = result[i].splitIntoColors(colorDepth);
-        vector<SliceLayerPart> islandParts;
-        for (Polygons &polys : colors) {
-            islandParts.emplace_back();
-            SliceLayerPart &part = islandParts.back();
-            if (unionAllType & FIX_HORRIBLE_UNION_ALL_TYPE_C) {
-                part.outline.add(polys[0]);
-                part.outline = part.outline.offset(-1000);
-            } else {
-                part.outline = polys;
-            }
-            part.boundaryBox.calculate(part.outline);
+        storageLayer.islands.emplace_back();
+        SliceLayerIsland &part = storageLayer.islands.back();
+        if (unionAllType & FIX_HORRIBLE_UNION_ALL_TYPE_C) {
+            part.outline.add(result[i][0]);
+            part.outline = part.outline.offset(-1000);
+        } else {
+            part.outline = result[i];
         }
-        // TODO: Add another layer of indirection within LayerPart (ColorPart or something)
-        generateOverlap(result[i], islandParts, overlap);
-        storageLayer.parts.insert(storageLayer.parts.end(), islandParts.begin(), islandParts.end());
+        part.boundaryBox.calculate(part.outline);
+
+        //TODO: This has to happen after generateMultipleVolumesOverlap
+        vector<Polygons> colors = part.outline.splitIntoColors(colorDepth);
+        for (Polygons &polys : colors) {
+            part.regions.emplace_back();
+            SliceIslandRegion &region = part.regions.back();
+            region.outline = polys;
+            generateOverlap(part.outline, region.outline, overlap);
+            //TODO: Set part.type and part.color
+        }
     }
 }
 
@@ -81,46 +84,34 @@ void dumpLayerparts(SliceDataStorage& storage, const char* filename)
     Point3 modelSize = storage.modelSize;
     Point3 modelMin = storage.modelMin;
     
-    for(unsigned int volumeIdx=0; volumeIdx<storage.volumes.size(); volumeIdx++)
+    for(SliceVolumeStorage &volume : storage.volumes)
     {
-        for(unsigned int layerNr=0;layerNr<storage.volumes[volumeIdx].layers.size(); layerNr++)
+        for(SliceLayer &layer : volume.layers)
         {
             fprintf(out, "<svg xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" style=\"width: 500px; height:500px\">\n");
-            SliceLayer* layer = &storage.volumes[volumeIdx].layers[layerNr];
-/*            for(unsigned int i=0;i<layer->parts.size();i++)
-            {
-                SliceLayerPart* part = &layer->parts[i];
-                for(unsigned int j=0;j<part->outline.size();j++)
-                {
-                    fprintf(out, "<polygon points=\"");
-                    for(unsigned int k=0;k<part->outline[j].size();k++)
-                        fprintf(out, "%f,%f ", float(part->outline[j][k].X - modelMin.x)/modelSize.x*500, float(part->outline[j][k].Y - modelMin.y)/modelSize.y*500);
-                    if (j == 0)
-                        fprintf(out, "\" style=\"fill:gray; stroke:black;stroke-width:1\" />\n");
-                    else
-                        fprintf(out, "\" style=\"fill:red; stroke:black;stroke-width:1\" />\n");
-                }
-            } */
             fprintf(out, "<marker id='MidMarker' viewBox='0 0 10 10' refX='5' refY='5' markerUnits='strokeWidth' markerWidth='10' markerHeight='10' stroke='lightblue' stroke-width='2' fill='none' orient='auto'>");
             fprintf(out, "<path d='M 0 0 L 10 5 M 0 10 L 10 5'/>");
             fprintf(out, "</marker>");
             fprintf(out, "<g fill-rule='evenodd' style=\"fill: gray;stroke-width:1\">\n");
-            for(unsigned int i=0;i<layer->parts.size();i++)
+            for(SliceLayerIsland &island : layer.islands)
             {
-                SliceLayerPart* part = &layer->parts[i];
-                for(unsigned int j=0;j<part->outline.size();j++)
+                for(SliceIslandRegion &region : island.regions)
                 {
-                    for(unsigned int k=0;k<part->outline[j].size();k++) {
-                        const PolygonRef& p = part->outline[j];
-                        const Color& color = *reinterpret_cast<const Color*>(p[k].Z);
-                        fprintf(out, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(color.r*255), int(color.g*255), int(color.b*255));
-                        fprintf(out, "M %f,%f L %f,%f ", float(p[k].X - modelMin.x)/modelSize.x*500, float(p[k].Y - modelMin.y)/modelSize.y*500, float(p[(k+1) % p.size()].X - modelMin.x)/modelSize.x*500, float(p[(k+1) % p.size()].Y - modelMin.y)/modelSize.y*500);
-                        fprintf(out, "\"/>");
+                    for(unsigned int j=0;j<region.outline.size();j++)
+                    {
+                        PolygonRef p = region.outline[j];
+                        for(unsigned int k=0;k<p.size();k++) {
+                            //TODO: print regions, not just outlines
+                            const Color& color = *reinterpret_cast<const Color*>(p[k].Z);
+                            fprintf(out, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(color.r*255), int(color.g*255), int(color.b*255));
+                            fprintf(out, "M %f,%f L %f,%f ", float(p[k].X - modelMin.x)/modelSize.x*500, float(p[k].Y - modelMin.y)/modelSize.y*500, float(p[(k+1) % p.size()].X - modelMin.x)/modelSize.x*500, float(p[(k+1) % p.size()].Y - modelMin.y)/modelSize.y*500);
+                            fprintf(out, "\"/>");
+                        }
+                        if (j == 0)
+                            fprintf(out, "\" style=\"fill:gray; stroke:black;stroke-width:1\" />\n");
+                        else
+                            fprintf(out, "\" style=\"fill:red; stroke:black;stroke-width:1\" />\n");
                     }
-                    if (j == 0)
-                        fprintf(out, "\" style=\"fill:gray; stroke:black;stroke-width:1\" />\n");
-                    else
-                        fprintf(out, "\" style=\"fill:red; stroke:black;stroke-width:1\" />\n");
                 }
             }
             fprintf(out, "</g></svg>\n");

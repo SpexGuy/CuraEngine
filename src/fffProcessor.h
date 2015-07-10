@@ -247,12 +247,15 @@ private:
         {
             for(unsigned int layerNr=0; layerNr<totalLayers; layerNr++)
             {
-                for(unsigned int volumeIdx=0; volumeIdx<storage.volumes.size(); volumeIdx++)
+                for(SliceVolumeStorage &volume : storage.volumes)
                 {
-                    SliceLayer* layer = &storage.volumes[volumeIdx].layers[layerNr];
-                    for(unsigned int partNr=0; partNr<layer->parts.size(); partNr++)
+                    SliceLayer &layer = volume.layers[layerNr];
+                    for(SliceLayerIsland &island : layer.islands)
                     {
-                        sendPolygonsToGui("inset0", layerNr, layer->printZ, layer->parts[partNr].outline);
+                        for (SliceIslandRegion &region : island.regions)
+                        {
+                            sendPolygonsToGui("inset0", layerNr, layer.printZ, region.outline);
+                        }
                     }
                 }
             }
@@ -261,24 +264,27 @@ private:
 
         for(unsigned int layerNr=0; layerNr<totalLayers; layerNr++)
         {
-            for(unsigned int volumeIdx=0; volumeIdx<storage.volumes.size(); volumeIdx++)
+            for(SliceVolumeStorage &volume : storage.volumes)
             {
+                SliceLayer &layer = volume.layers[layerNr];
                 int insetCount = config.insetCount;
                 if (config.spiralizeMode && static_cast<int>(layerNr) < config.downSkinCount && layerNr % 2 == 1)//Add extra insets every 2 layers when spiralizing, this makes bottoms of cups watertight.
                     insetCount += 5;
-                SliceLayer* layer = &storage.volumes[volumeIdx].layers[layerNr];
                 int extrusionWidth = config.extrusionWidth;
                 if (layerNr == 0)
                     extrusionWidth = config.layer0extrusionWidth;
-                generateInsets(layer, extrusionWidth, insetCount);
+                generateInsets(&layer, extrusionWidth, insetCount);
 
-                for(unsigned int partNr=0; partNr<layer->parts.size(); partNr++)
+                for(SliceLayerIsland &island : layer.islands)
                 {
-                    if (layer->parts[partNr].insets.size() > 0)
+                    for (SliceIslandRegion &region : island.regions)
                     {
-                        sendPolygonsToGui("inset0", layerNr, layer->printZ, layer->parts[partNr].insets[0]);
-                        for(unsigned int inset=1; inset<layer->parts[partNr].insets.size(); inset++)
-                            sendPolygonsToGui("insetx", layerNr, layer->printZ, layer->parts[partNr].insets[inset]);
+                        if (region.insets.size() > 0)
+                        {
+                            sendPolygonsToGui("inset0", layerNr, layer.printZ, region.insets[0]);
+                            for(unsigned int inset=1; inset<region.insets.size(); inset++)
+                                sendPolygonsToGui("insetx", layerNr, layer.printZ, region.insets[inset]);
+                        }
                     }
                 }
             }
@@ -289,11 +295,11 @@ private:
             for(unsigned int layerNr=0; layerNr<totalLayers; layerNr++)
             {
                 Polygons oozeShield;
-                for(unsigned int volumeIdx=0; volumeIdx<storage.volumes.size(); volumeIdx++)
+                for(SliceVolumeStorage &volume : storage.volumes)
                 {
-                    for(unsigned int partNr=0; partNr<storage.volumes[volumeIdx].layers[layerNr].parts.size(); partNr++)
+                    for(SliceLayerIsland &island : volume.layers[layerNr].islands)
                     {
-                        oozeShield = oozeShield.unionPolygons(storage.volumes[volumeIdx].layers[layerNr].parts[partNr].outline.offset(MM2INT(2.0)));
+                        oozeShield = oozeShield.unionPolygons(island.outline.offset(MM2INT(2.0)));
                     }
                 }
                 storage.oozeShield.push_back(oozeShield);
@@ -313,17 +319,18 @@ private:
         {
             if (!config.spiralizeMode || static_cast<int>(layerNr) < config.downSkinCount)    //Only generate up/downskin and infill for the first X layers when spiralize is choosen.
             {
-                for(unsigned int volumeIdx=0; volumeIdx<storage.volumes.size(); volumeIdx++)
+                for(SliceVolumeStorage &volume : storage.volumes)
                 {
                     int extrusionWidth = config.extrusionWidth;
                     if (layerNr == 0)
                         extrusionWidth = config.layer0extrusionWidth;
-                    generateSkins(layerNr, storage.volumes[volumeIdx], extrusionWidth, config.downSkinCount, config.upSkinCount, config.infillOverlap);
-                    generateSparse(layerNr, storage.volumes[volumeIdx], extrusionWidth, config.downSkinCount, config.upSkinCount);
+                    generateSkins(layerNr, volume, extrusionWidth, config.downSkinCount, config.upSkinCount, config.infillOverlap);
+                    generateSparse(layerNr, volume, extrusionWidth, config.downSkinCount, config.upSkinCount);
 
-                    SliceLayer* layer = &storage.volumes[volumeIdx].layers[layerNr];
-                    for(unsigned int partNr=0; partNr<layer->parts.size(); partNr++)
-                        sendPolygonsToGui("skin", layerNr, layer->printZ, layer->parts[partNr].skinOutline);
+                    SliceLayer &layer = volume.layers[layerNr];
+                    for(SliceLayerIsland &island : layer.islands)
+                        for (SliceIslandRegion &region : island.regions)
+                            sendPolygonsToGui("skin", layerNr, layer.printZ, region.skinOutline);
                 }
             }
             cura::logProgress("skin",layerNr+1,totalLayers);
@@ -547,7 +554,7 @@ private:
             gcodeLayer.addPolygonsByOptimizer(storage.skirt, &skirtConfig);
         }
 
-        SliceLayer* layer = &storage.volumes[volumeIdx].layers[layerNr];
+        SliceLayer &layer = storage.volumes[volumeIdx].layers[layerNr];
         if (extruderChanged)
             addWipeTower(storage, gcodeLayer, layerNr, prevExtruder);
 
@@ -555,113 +562,120 @@ private:
         {
             gcodeLayer.setAlwaysRetract(true);
             gcodeLayer.addPolygonsByOptimizer(storage.oozeShield[layerNr], &skirtConfig);
-            sendPolygonsToGui("oozeshield", layerNr, layer->printZ, storage.oozeShield[layerNr]);
+            sendPolygonsToGui("oozeshield", layerNr, layer.printZ, storage.oozeShield[layerNr]);
             gcodeLayer.setAlwaysRetract(config.enableCombing == COMBING_OFF);
         }
 
         if (config.simpleMode)
         {
-            Polygons polygons;
-            for(unsigned int partNr=0; partNr<layer->parts.size(); partNr++)
+            Polygons strokes;
+            for(SliceLayerIsland &island : layer.islands)
             {
-                for(unsigned int n=0; n<layer->parts[partNr].outline.size(); n++)
+                for (SliceIslandRegion &region : island.regions)
                 {
-                    for(unsigned int m=1; m<layer->parts[partNr].outline[n].size(); m++)
+                    for(unsigned int n=0; n<region.outline.size(); n++)
                     {
-                        Polygon p;
-                        p.add(layer->parts[partNr].outline[n][m-1]);
-                        p.add(layer->parts[partNr].outline[n][m]);
-                        polygons.add(p);
-                    }
-                    if (layer->parts[partNr].outline[n].size() > 0)
-                    {
-                        Polygon p;
-                        p.add(layer->parts[partNr].outline[n][layer->parts[partNr].outline[n].size()-1]);
-                        p.add(layer->parts[partNr].outline[n][0]);
-                        polygons.add(p);
+                        for(unsigned int m=1; m<region.outline[n].size(); m++)
+                        {
+                            Polygon p;
+                            p.add(region.outline[n][m-1]);
+                            p.add(region.outline[n][m]);
+                            strokes.add(p);
+                        }
+                        if (region.outline[n].size() > 0)
+                        {
+                            Polygon p;
+                            p.add(region.outline[n].back());
+                            p.add(region.outline[n].front());
+                            strokes.add(p);
+                        }
                     }
                 }
             }
-            for(unsigned int n=0; n<layer->openLines.size(); n++)
+            for(unsigned int n=0; n<layer.openLines.size(); n++)
             {
-                for(unsigned int m=1; m<layer->openLines[n].size(); m++)
+                for(unsigned int m=1; m<layer.openLines[n].size(); m++)
                 {
                     Polygon p;
-                    p.add(layer->openLines[n][m-1]);
-                    p.add(layer->openLines[n][m]);
-                    polygons.add(p);
+                    p.add(layer.openLines[n][m-1]);
+                    p.add(layer.openLines[n][m]);
+                    strokes.add(p);
                 }
             }
             if (config.spiralizeMode)
                 inset0Config.spiralize = true;
             
-            gcodeLayer.addPolygonsByOptimizer(polygons, &inset0Config);
+            gcodeLayer.addPolygonsByOptimizer(strokes, &inset0Config);
             return;
         }
 
 
         PathOrderOptimizer partOrderOptimizer(gcode.getStartPositionXY());
-        for(unsigned int partNr=0; partNr<layer->parts.size(); partNr++)
+        for(SliceLayerIsland &island : layer.islands)
         {
-            partOrderOptimizer.addPolygon(layer->parts[partNr].insets[0][0]);
+            partOrderOptimizer.addPolygon(island.outline[0]);
         }
         partOrderOptimizer.optimize();
 
-        for(unsigned int partCounter=0; partCounter<partOrderOptimizer.polyOrder.size(); partCounter++)
+        for(int islandIndex : partOrderOptimizer.polyOrder)
         {
-            SliceLayerPart* part = &layer->parts[partOrderOptimizer.polyOrder[partCounter]];
+            // TODO: Let partOrderOptimizer consider doing regions, not islands?
+            SliceLayerIsland &island = layer.islands[islandIndex];
+            // TODO: At least optimize the order of parts within an island
+            for (SliceIslandRegion &region : island.regions)
+            {
+                if (config.enableCombing == COMBING_OFF)
+                {
+                    gcodeLayer.setAlwaysRetract(true);
+                }else
+                {
+                    gcodeLayer.setCombBoundary(&region.combBoundary);
+                    gcodeLayer.setAlwaysRetract(false);
+                }
 
-            if (config.enableCombing == COMBING_OFF)
-            {
-                gcodeLayer.setAlwaysRetract(true);
-            }else
-            {
-                gcodeLayer.setCombBoundary(&part->combBoundery);
-                gcodeLayer.setAlwaysRetract(false);
+                int fillAngle = 45;
+                if (layerNr & 1)
+                    fillAngle += 90;
+                int extrusionWidth = config.extrusionWidth;
+                if (layerNr == 0)
+                    extrusionWidth = config.layer0extrusionWidth;
+
+                // Add either infill or perimeter first depending on option
+                if (!config.perimeterBeforeInfill) 
+                {
+                    addInfillToGCode(region, gcodeLayer, layerNr, extrusionWidth, fillAngle);
+                    addInsetToGCode(region, gcodeLayer, layerNr);
+                }else
+                {
+                    addInsetToGCode(region, gcodeLayer, layerNr);
+                    addInfillToGCode(region, gcodeLayer, layerNr, extrusionWidth, fillAngle);
+                }
+                
+                Polygons skinPolygons;
+                for(Polygons outline : region.skinOutline.splitIntoParts())
+                {
+                    int bridge = -1;
+                    if (layerNr > 0)
+                        bridge = bridgeAngle(outline, &storage.volumes[volumeIdx].layers[layerNr-1]);
+                    generateLineInfill(outline, skinPolygons, extrusionWidth, extrusionWidth, config.infillOverlap, (bridge > -1) ? bridge : fillAngle);
+                }
+                if (config.enableCombing == COMBING_NOSKIN)
+                {
+                    gcodeLayer.setCombBoundary(nullptr);
+                    gcodeLayer.setAlwaysRetract(true);
+                }
+                gcodeLayer.addPolygonsByOptimizer(skinPolygons, &skinConfig);
+
+
+                //After a layer part, make sure the nozzle is inside the comb boundary, so we do not retract on the perimeter.
+                if (!config.spiralizeMode || static_cast<int>(layerNr) < config.downSkinCount)
+                    gcodeLayer.moveInsideCombBoundary(config.extrusionWidth * 2);
             }
-
-            int fillAngle = 45;
-            if (layerNr & 1)
-                fillAngle += 90;
-            int extrusionWidth = config.extrusionWidth;
-            if (layerNr == 0)
-                extrusionWidth = config.layer0extrusionWidth;
-
-            // Add either infill or perimeter first depending on option
-            if (!config.perimeterBeforeInfill) 
-            {
-                addInfillToGCode(part, gcodeLayer, layerNr, extrusionWidth, fillAngle);
-                addInsetToGCode(part, gcodeLayer, layerNr);
-            }else
-            {
-                addInsetToGCode(part, gcodeLayer, layerNr);
-                addInfillToGCode(part, gcodeLayer, layerNr, extrusionWidth, fillAngle);
-            }
-            
-            Polygons skinPolygons;
-            for(Polygons outline : part->skinOutline.splitIntoParts())
-            {
-                int bridge = -1;
-                if (layerNr > 0)
-                    bridge = bridgeAngle(outline, &storage.volumes[volumeIdx].layers[layerNr-1]);
-                generateLineInfill(outline, skinPolygons, extrusionWidth, extrusionWidth, config.infillOverlap, (bridge > -1) ? bridge : fillAngle);
-            }
-            if (config.enableCombing == COMBING_NOSKIN)
-            {
-                gcodeLayer.setCombBoundary(nullptr);
-                gcodeLayer.setAlwaysRetract(true);
-            }
-            gcodeLayer.addPolygonsByOptimizer(skinPolygons, &skinConfig);
-
-
-            //After a layer part, make sure the nozzle is inside the comb boundary, so we do not retract on the perimeter.
-            if (!config.spiralizeMode || static_cast<int>(layerNr) < config.downSkinCount)
-                gcodeLayer.moveInsideCombBoundary(config.extrusionWidth * 2);
         }
         gcodeLayer.setCombBoundary(nullptr);
     }
 
-    void addInfillToGCode(SliceLayerPart* part, GCodePlanner& gcodeLayer, int layerNr, int extrusionWidth, int fillAngle)
+    void addInfillToGCode(SliceIslandRegion& part, GCodePlanner& gcodeLayer, int layerNr, int extrusionWidth, int fillAngle)
     {
         Polygons infillPolygons;
         if (config.sparseInfillLineDistance > 0)
@@ -670,20 +684,20 @@ private:
             {
                 case INFILL_AUTOMATIC:
                     generateAutomaticInfill(
-                        part->sparseOutline, infillPolygons, extrusionWidth,
+                        part.sparseOutline, infillPolygons, extrusionWidth,
                         config.sparseInfillLineDistance,
                         config.infillOverlap, fillAngle);
                     break;
 
                 case INFILL_GRID:
-                    generateGridInfill(part->sparseOutline, infillPolygons,
+                    generateGridInfill(part.sparseOutline, infillPolygons,
                                        extrusionWidth,
                                        config.sparseInfillLineDistance,
                                        config.infillOverlap, fillAngle);
                     break;
 
                 case INFILL_LINES:
-                    generateLineInfill(part->sparseOutline, infillPolygons,
+                    generateLineInfill(part.sparseOutline, infillPolygons,
                                        extrusionWidth,
                                        config.sparseInfillLineDistance,
                                        config.infillOverlap, fillAngle);
@@ -691,7 +705,7 @@ private:
 
                 case INFILL_CONCENTRIC:
                     generateConcentricInfill(
-                        part->sparseOutline, infillPolygons,
+                        part.sparseOutline, infillPolygons,
                         config.sparseInfillLineDistance);
                     break;
             }
@@ -700,7 +714,7 @@ private:
         gcodeLayer.addPolygonsByOptimizer(infillPolygons, &infillConfig);
     }
 
-    void addInsetToGCode(SliceLayerPart* part, GCodePlanner& gcodeLayer, int layerNr)
+    void addInsetToGCode(SliceIslandRegion& part, GCodePlanner& gcodeLayer, int layerNr)
     {
         if (config.insetCount > 0)
         {
@@ -708,15 +722,15 @@ private:
             {
                 if (static_cast<int>(layerNr) >= config.downSkinCount)
                     inset0Config.spiralize = true;
-                if (static_cast<int>(layerNr) == config.downSkinCount && part->insets.size() > 0)
-                    gcodeLayer.addPolygonsByOptimizer(part->insets[0], &insetXConfig);
+                if (static_cast<int>(layerNr) == config.downSkinCount && part.insets.size() > 0)
+                    gcodeLayer.addPolygonsByOptimizer(part.insets[0], &insetXConfig);
             }
-            for(int insetNr=part->insets.size()-1; insetNr>-1; insetNr--)
+            for(int insetNr=part.insets.size()-1; insetNr>-1; insetNr--)
             {
                 if (insetNr == 0)
-                    gcodeLayer.addPolygonsByOptimizer(part->insets[insetNr], &inset0Config);
+                    gcodeLayer.addPolygonsByOptimizer(part.insets[insetNr], &inset0Config);
                 else
-                    gcodeLayer.addPolygonsByOptimizer(part->insets[insetNr], &insetXConfig);
+                    gcodeLayer.addPolygonsByOptimizer(part.insets[insetNr], &insetXConfig);
             }
         }
     }
@@ -744,8 +758,8 @@ private:
         for(unsigned int volumeCnt = 0; volumeCnt < storage.volumes.size(); volumeCnt++)
         {
             SliceLayer* layer = &storage.volumes[volumeCnt].layers[layerNr];
-            for(unsigned int n=0; n<layer->parts.size(); n++)
-                supportGenerator.polygons = supportGenerator.polygons.difference(layer->parts[n].outline.offset(config.supportXYDistance));
+            for(unsigned int n=0; n<layer->islands.size(); n++)
+                supportGenerator.polygons = supportGenerator.polygons.difference(layer->islands[n].outline.offset(config.supportXYDistance));
         }
         //Contract and expand the suppory polygons so small sections are removed and the final polygon is smoothed a bit.
         supportGenerator.polygons = supportGenerator.polygons.offset(-config.extrusionWidth * 3);

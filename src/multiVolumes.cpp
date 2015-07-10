@@ -13,11 +13,11 @@ void carveMultipleVolumes(vector<SliceVolumeStorage> &volumes)
             {
                 SliceLayer* layer1 = &volumes[idx].layers[layerNr];
                 SliceLayer* layer2 = &volumes[idx2].layers[layerNr];
-                for(unsigned int p1 = 0; p1 < layer1->parts.size(); p1++)
+                for(unsigned int p1 = 0; p1 < layer1->islands.size(); p1++)
                 {
-                    for(unsigned int p2 = 0; p2 < layer2->parts.size(); p2++)
+                    for(unsigned int p2 = 0; p2 < layer2->islands.size(); p2++)
                     {
-                        layer1->parts[p1].outline = layer1->parts[p1].outline.difference(layer2->parts[p2].outline);
+                        layer1->islands[p1].outline = layer1->islands[p1].outline.difference(layer2->islands[p2].outline);
                     }
                 }
             }
@@ -34,29 +34,27 @@ void generateMultipleVolumesOverlap(vector<SliceVolumeStorage> &volumes, int ove
     for(unsigned int layerNr=0; layerNr < volumes[0].layers.size(); layerNr++)
     {
         Polygons fullLayer;
-        for(unsigned int volIdx = 0; volIdx < volumes.size(); volIdx++)
+        for(SliceVolumeStorage &volume : volumes)
         {
-            SliceLayer* layer1 = &volumes[volIdx].layers[layerNr];
-            for(unsigned int p1 = 0; p1 < layer1->parts.size(); p1++)
+            for(SliceLayerIsland &island : volume.layers[layerNr].islands)
             {
-                fullLayer = fullLayer.unionPolygons(layer1->parts[p1].outline.offset(20));
+                fullLayer = fullLayer.unionPolygons(island.outline.offset(20));
             }
         }
         fullLayer = fullLayer.offset(-20);
         
-        for(unsigned int volIdx = 0; volIdx < volumes.size(); volIdx++)
+        for(SliceVolumeStorage &volume : volumes)
         {
-            SliceLayer* layer1 = &volumes[volIdx].layers[layerNr];
-            generateOverlap(fullLayer, layer1->parts, overlap);
+            for(SliceLayerIsland &island : volume.layers[layerNr].islands)
+            {
+                generateOverlap(fullLayer, island.outline, overlap);
+            }
         }
     }
 }
 
-void generateOverlap(const Polygons &outline, vector<SliceLayerPart> &parts, int overlap) {
-    for(unsigned int p1 = 0; p1 < parts.size(); p1++)
-    {
-        parts[p1].outline = outline.intersection(parts[p1].outline.offset(overlap / 2));
-    }
+void generateOverlap(const Polygons &boundOutline, Polygons &partOutline, int overlap) {
+    partOutline = boundOutline.intersection(partOutline.offset(overlap / 2));
 }
 
 }//namespace cura

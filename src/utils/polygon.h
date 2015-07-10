@@ -160,6 +160,7 @@ public:
         return (crossings % 2) == 1;
     }
 
+    //TODO: Make a better iterator here. (code would be 4x cleaner)
     ClipperLib::Path::iterator begin()
     {
         return polygon->begin();
@@ -179,6 +180,11 @@ public:
     {
         return polygon->end();
     }
+
+    const Point &front() const { return polygon->front(); }
+    Point &front() { return polygon->front(); }
+    const Point &back() const { return polygon->back(); }
+    Point &back() { return polygon->back(); }
 
     friend class Polygons;
     friend class Polygon;

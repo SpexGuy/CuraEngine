@@ -3,6 +3,7 @@
 
 #include "layerPart.h"
 #include "settings.h"
+#include "multiVolumes.h"
 
 /*
 The layer-part creation step is the first step in creating actual useful data for 3D printing.
@@ -22,7 +23,7 @@ of single colors to be grouped together without creating visible artifacts in th
 
 namespace cura {
 
-void createLayerWithParts(SliceLayer& storageLayer, SlicerLayer* layer, int colorDepth, int unionAllType)
+void createLayerWithParts(SliceLayer& storageLayer, SlicerLayer* layer, int colorDepth, int overlap, int unionAllType)
 {
     storageLayer.openLines = layer->openPolygons;
 
@@ -44,9 +45,10 @@ void createLayerWithParts(SliceLayer& storageLayer, SlicerLayer* layer, int colo
     for(unsigned int i=0; i<result.size(); i++)
     {
         vector<Polygons> colors = result[i].splitIntoColors(colorDepth);
+        vector<SliceLayerPart> islandParts;
         for (Polygons &polys : colors) {
-            storageLayer.parts.emplace_back();
-            SliceLayerPart &part = storageLayer.parts.back();
+            islandParts.emplace_back();
+            SliceLayerPart &part = islandParts.back();
             if (unionAllType & FIX_HORRIBLE_UNION_ALL_TYPE_C) {
                 part.outline.add(polys[0]);
                 part.outline = part.outline.offset(-1000);
@@ -56,18 +58,19 @@ void createLayerWithParts(SliceLayer& storageLayer, SlicerLayer* layer, int colo
             part.boundaryBox.calculate(part.outline);
         }
         // TODO: Add another layer of indirection within LayerPart (ColorPart or something)
-        // TODO: Overlap colors from same contour like generateMultipleVolumesOverlap
+        generateOverlap(result[i], islandParts, overlap);
+        storageLayer.parts.insert(storageLayer.parts.end(), islandParts.begin(), islandParts.end());
     }
 }
 
-void createLayerParts(SliceVolumeStorage& storage, Slicer* slicer, int printZOffset, int colorDepth, int unionAllType)
+void createLayerParts(SliceVolumeStorage& storage, Slicer* slicer, int printZOffset, int colorDepth, int overlap, int unionAllType)
 {
     for(unsigned int layerNr = 0; layerNr < slicer->layers.size(); layerNr++)
     {
         storage.layers.push_back(SliceLayer());
         storage.layers[layerNr].sliceZ = slicer->layers[layerNr].z;
         storage.layers[layerNr].printZ = slicer->layers[layerNr].z + printZOffset;
-        createLayerWithParts(storage.layers[layerNr], &slicer->layers[layerNr], colorDepth, unionAllType);
+        createLayerWithParts(storage.layers[layerNr], &slicer->layers[layerNr], colorDepth, overlap, unionAllType);
     }
 }
 

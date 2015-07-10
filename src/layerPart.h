@@ -19,9 +19,9 @@ It's also the first step that stores the result in the "data storage" so all oth
 
 namespace cura {
 
-void createLayerWithParts(SliceLayer& storageLayer, SlicerLayer* layer, int unionAllType);
+void createLayerWithParts(SliceLayer& storageLayer, SlicerLayer* layer, int colorDepth, int overlap, int unionAllType);
 
-void createLayerParts(SliceVolumeStorage& storage, Slicer* slicer, int printZOffset, int colorDepth, int unionAllType);
+void createLayerParts(SliceVolumeStorage& storage, Slicer* slicer, int printZOffset, int colorDepth, int overlap, int unionAllType);
 
 void dumpLayerparts(SliceDataStorage& storage, const char* filename);
 

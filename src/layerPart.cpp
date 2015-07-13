@@ -31,7 +31,6 @@ void createLayerWithParts(SliceLayer& storageLayer, SlicerLayer* layer, int colo
     {
         for(unsigned int i=0; i<layer->polygonList.size(); i++)
         {
-            // TODO: Does reverse() screw us over?
             if (layer->polygonList[i].orientation())
                 layer->polygonList[i].reverse();
         }

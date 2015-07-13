@@ -84,7 +84,6 @@ public:
         TimeKeeper timeKeeperTotal;
         SliceDataStorage storage;
         preSetup();
-        // TODO: Clipper in here...
         if (!prepareModel(storage, files))
             return false;
 

@@ -162,7 +162,7 @@ void SlicerLayer::makePolygons(OptimizedVolume* ov, bool keepNoneClosed, bool ex
             }
         }
     }
-    // TODO: Color may want this?
+    // TODO: Color here
     if (extensiveStitching)
     {
         //For extensive stitching find 2 open polygons that are touching 2 closed polygons.
@@ -379,8 +379,6 @@ Slicer::Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool kee
     {
         layers[layerNr].makePolygons(ov, keepNoneClosed, extensiveStitching);
     }
-    // TODO: do we still have color?
-    //      ... yes?
     //dumpSegmentsToHTML("slicerDump.html");
 }
 

@@ -8,21 +8,23 @@
 /*
 SliceData
 + Layers[]
-  + LayerParts[]
-    + OutlinePolygons[]
-    + Insets[]
+  + Islands[]
+    + Outline[]
+    + Regions[]
+      + Outline[]
+      + Insets[]
       + Polygons[]
-    + SkinPolygons[]
+      + SkinPolygons[]
 */
 namespace cura {
 
-enum SliceIslandType { sitInfill, sitBorder };
+enum SliceRegionType { srtInfill, srtBorder, srtUnoptimized };
 
 class SliceIslandRegion
 {
 public:
-    SliceIslandType type; //TODO: Set and use this
-    const Color *color; //TODO: Set and use this
+    SliceRegionType type; //TODO: Use this
+    const Color *color; //TODO: Use this
     Polygons outline;
     Polygons combBoundary;
     vector<Polygons> insets;
@@ -33,7 +35,7 @@ public:
 class SliceLayerIsland
 {
 public:
-    AABB boundaryBox; //This is used by Bridge. Do regions need one also?
+    AABB boundaryBox;
     Polygons outline;
     vector<SliceIslandRegion> regions;
 };

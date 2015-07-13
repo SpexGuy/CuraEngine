@@ -22,6 +22,8 @@ namespace cura {
 const static int clipper_init = (ClipperLib::ioPreserveCollinear);
 #define NO_INDEX (std::numeric_limits<unsigned int>::max())
 
+class SliceIslandRegion;
+
 class PolygonRef
 {
     ClipperLib::Path* polygon;
@@ -292,7 +294,7 @@ public:
         clipper.Execute(ret.polygons, distance);
         return ret;
     }
-    vector<Polygons> splitIntoColors(int distance) const;
+    void splitIntoColors(vector<SliceIslandRegion> &regions, int distance) const;
     vector<Polygons> splitIntoParts(bool unionAll = false) const
     {
         vector<Polygons> ret;

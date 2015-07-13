@@ -1,4 +1,5 @@
 #include "polygon.h"
+#include "../sliceDataStorage.h"
 
 using namespace ClipperLib;
 
@@ -67,7 +68,7 @@ void makePolygons(vector<Paths> &ret, const Paths &outline, const Path &offset) 
 	}
 }
 
-vector<Polygons> Polygons::splitIntoColors(int distance) const {
+void Polygons::splitIntoColors(vector<SliceIslandRegion> &regions, int distance) const {
     // Set up a copy of the paths where the z value holds the indexes to the point
     Paths copyPaths = copyReplaceZ(polygons);
     // Do the offset
@@ -90,13 +91,24 @@ vector<Polygons> Polygons::splitIntoColors(int distance) const {
     for (const Path &path : offset) {
     	makePolygons(known, polygons, path);
     }
-    // Now that we've made polygons, change offset z values to be the boundaries of infill
-    for (Path &path : offset) {
-    	copyZ(path, reinterpret_cast<cInt>(ColorCache::badColor));
+    // TODO: Move this into makePolygons
+    for (Paths &poly : known) {
+    	regions.emplace_back();
+    	SliceIslandRegion &region = regions.back();
+    	region.type = srtBorder;
+    	region.color = reinterpret_cast<const Color *>(poly[0][1].Z);
+    	region.outline = Polygons(poly);
     }
+
     // Add the infill areas to known
-    for (Path &path : offset) {
-    	known.emplace_back(1, path);
+    // TODO: Offset with a polyTree for efficiency
+    for (Polygons &polygons : Polygons(offset).splitIntoParts()) {
+    	known.emplace_back(polygons.polygons);
+    	regions.emplace_back();
+    	SliceIslandRegion &region = regions.back();
+    	region.type = srtInfill;
+    	region.color = ColorCache::badColor;
+    	region.outline = polygons;
     }
 
     // Last step: find the unoptimized parts which are neither infill nor colored edge.
@@ -114,10 +126,14 @@ vector<Polygons> Polygons::splitIntoColors(int distance) const {
    	// Finally, convert everything to Polygons and return
    	vector<Polygons> polys;
    	_processPolyTreeNode(&tree, polys); // split into parts in the result, since it may contain complex (multiple contour) polygons
-   	for (Paths &poly : known) {
-   		polys.push_back(Polygons(poly));
+
+   	for (Polygons &poly : polys) {
+    	regions.emplace_back();
+    	SliceIslandRegion &region = regions.back();
+    	region.type = srtUnoptimized;
+    	region.color = ColorCache::badColor;
+    	region.outline = Polygons(poly);
    	}
-   	return polys;
 }
 
 }

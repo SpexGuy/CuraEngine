@@ -54,13 +54,9 @@ void createLayerWithParts(SliceLayer& storageLayer, SlicerLayer* layer, int colo
         part.boundaryBox.calculate(part.outline);
 
         //TODO: This has to happen after generateMultipleVolumesOverlap
-        vector<Polygons> colors = part.outline.splitIntoColors(colorDepth);
-        for (Polygons &polys : colors) {
-            part.regions.emplace_back();
-            SliceIslandRegion &region = part.regions.back();
-            region.outline = polys;
+        part.outline.splitIntoColors(part.regions, colorDepth);
+        for (SliceIslandRegion &region : part.regions) {
             generateOverlap(part.outline, region.outline, overlap);
-            //TODO: Set part.type and part.color
         }
     }
 }

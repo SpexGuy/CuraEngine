@@ -36,6 +36,10 @@ public:
         }
     }
 
+    inline bool isInfill() {
+        return type == srtInfill;
+    }
+
     inline bool operator==(const RegionColoring &other) const {
         if (other.type != type) return false;
         return type != srtBorder || other.color == color;

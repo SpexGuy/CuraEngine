@@ -7,6 +7,7 @@ namespace cura {
 void generateInsets(SliceIslandRegion* part, int offset, int insetCount)
 {
     part->combBoundary = part->outline.offset(-offset);
+    if (part->coloring.isInfill()) insetCount = 1;
     if (insetCount == 0)
     {
         part->insets.push_back(part->outline);

@@ -40,7 +40,12 @@ public:
         return polygon->size();
     }
 
-    Point& operator[] (unsigned int index) const
+    const Point& operator[] (unsigned int index) const
+    {
+        POLY_ASSERT(index < size());
+        return (*polygon)[index];
+    }
+    Point& operator[] (unsigned int index)
     {
         POLY_ASSERT(index < size());
         return (*polygon)[index];
@@ -51,7 +56,7 @@ public:
         return polygon->data();
     }
 
-    void add(const Point p)
+    void add(const Point &p)
     {
         polygon->push_back(p);
     }

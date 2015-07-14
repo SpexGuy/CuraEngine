@@ -55,17 +55,78 @@ inline void copyZ(Path &poly, cInt value) {
 	}
 }
 
-void makePolygons(vector<Paths> &ret, const Paths &outline, const Path &offset) {
-	// TODO: Coalesce like colors
-	int prevIndex = offset.size() - 1;
-	for (unsigned int currIndex = 0; currIndex < offset.size(); prevIndex = currIndex, ++currIndex) {
-		ret.emplace_back(1);
-		ret.back()[0] << lookupPrev(outline, offset[currIndex])
-		              << lookup(outline, offset[currIndex]) // this color will be used
-		              << offset[currIndex]
-		              << offset[prevIndex];
-        copyZ(ret.back()[0], ret.back()[0][1].Z); // copy the color from the second point
-	}
+inline bool areAdjacent(const Paths &outline, const Point &p1, const Point &p2) {
+    //TODO: This is not the fastest implementation, but it works
+    return &lookupPrev(outline, p2) == &lookup(outline, p1);
+}
+
+inline int next(const Path &offset, int index) {
+    return (index + 1) % offset.size();
+}
+inline int prev(const Path &offset, int index) {
+    return index == 0 ? offset.size()-1 : index-1;
+}
+
+void makePolygons(vector<SliceIslandRegion> &regions, vector<Paths> &known, const Paths &outline, const Path &offset) {
+    if (offset.size() < 2) return;
+    // Find the first of this extent, inclusive
+    int firstIndex = 0;
+    while(areAdjacent(outline, offset[prev(offset, firstIndex)], offset[firstIndex])) {
+        firstIndex = prev(offset, firstIndex);
+        if (firstIndex == 0) break; // prevent infinite loop
+    }
+
+    // Iterate the extents of contiguous regions
+    int extentStart = firstIndex;
+    do {
+        // Find the end and length of the extent which starts at extentStart, exclusive
+        int extentEnd = extentStart;
+        int extentLen = 0;
+        do {
+            extentEnd = next(offset, extentEnd);
+            extentLen++;
+        } while(areAdjacent(outline, offset[prev(offset, extentEnd)], offset[extentEnd]) && extentEnd != extentStart);
+
+        // Setup the mask for known regions
+        known.emplace_back(1);
+        Path &whole = known.back()[0];
+        whole.reserve(2*(extentLen+1)); // outside and inside part, plus first and last edge
+        whole << lookupPrev(outline, offset[extentStart]);
+        whole.back().Z = reinterpret_cast<cInt>(ColorCache::badColor);
+
+        // Build polygons along the extent
+        int extentCurr = extentStart;
+        do {
+            //TODO: emplace_back first, then get poly to reference inside regions.back().outline
+            Polygons polys;
+            PolygonRef poly = polys.newPoly(); // eww... should be Polygon&
+
+            // TODO: Combine same colors
+            poly.add(lookupPrev(outline, offset[extentCurr]));
+            poly.add(lookup(outline, offset[extentCurr]));
+            poly.add(offset[extentCurr]);
+            poly.add(offset[prev(offset, extentCurr)]);
+
+            whole << poly[1];
+            regions.emplace_back(polys, srtBorder, reinterpret_cast<const Color *>(poly[1].Z));
+
+            extentCurr = next(offset, extentCurr);
+        } while(extentCurr != extentEnd);
+
+        // Backtrack along the extent, adding the inside of the mask
+        do {
+            extentCurr = prev(offset, extentCurr);
+            whole << offset[extentCurr];
+            whole.back().Z = reinterpret_cast<cInt>(ColorCache::badColor);
+        } while(extentCurr != extentStart);
+
+        // Finish off the mask
+        whole << offset[prev(offset, extentStart)];
+        whole.back().Z = reinterpret_cast<cInt>(ColorCache::badColor);
+
+        // Move on to the next extent
+        extentStart = extentEnd;
+    } while(extentStart != firstIndex);
 }
 
 void Polygons::splitIntoColors(vector<SliceIslandRegion> &regions, int distance) const {
@@ -87,19 +148,15 @@ void Polygons::splitIntoColors(vector<SliceIslandRegion> &regions, int distance)
 
     vector<Paths> known; // The areas of the object to which color has been assigned
 
-    // Iterate the output, creating polygons of a single color from each path
+    // Iterate the output, creating polygons of a single color from each path, and a mask in known
     for (const Path &path : offset) {
-    	makePolygons(known, polygons, path);
-    }
-    // TODO: Move this into makePolygons
-    for (Paths &poly : known) {
-    	regions.emplace_back(Polygons(poly), srtBorder, reinterpret_cast<const Color *>(poly[0][1].Z));
+    	makePolygons(regions, known, polygons, path);
     }
 
     // Add the infill areas to known
     // TODO: Offset with a polyTree for efficiency
     for (Polygons &polygons : Polygons(offset).splitIntoParts()) {
-    	known.emplace_back(polygons.polygons);
+    	known.emplace_back(polygons.polygons); // these areas should be completely covered by makePolygons, so setting their z values is unnecessary.
     	regions.emplace_back(polygons, srtInfill, ColorCache::badColor);
     }
 

@@ -42,7 +42,7 @@ public:
         guiSocket.connectTo("127.0.0.1", portNr);
     }
 
-    void sendPolygonsToGui(const char* name, int layerNr, int32_t z, Polygons& polygons)
+    void sendPolygonsToGui(const char* name, int layerNr, int32_t z, Polygons& polygons, const RegionColoring &coloring = defaultColoring)
     {
         guiSocket.sendNr(GUI_CMD_SEND_POLYGONS);
         guiSocket.sendNr(polygons.size());
@@ -59,10 +59,11 @@ public:
                 guiSocket.sendAll(&p.Y, sizeof(p.Y));
             }
             for(Point p : polygon) {
-                if (!p.Z) {
+                const Color *color = coloring.getColor(p);
+                if (!color) {
                     guiSocket.sendAll(ColorCache::badColor, sizeof(Color)); 
                 } else {
-                    guiSocket.sendAll(reinterpret_cast<Color*>(p.Z), sizeof(Color));
+                    guiSocket.sendAll(color, sizeof(Color));
                 }
             }
         }
@@ -210,8 +211,8 @@ private:
             for(unsigned int layerNr=0; layerNr<slicer->layers.size(); layerNr++)
             {
                 //Reporting the outline here slows down the engine quite a bit, so only do so when debugging.
-                //sendPolygonsToGui("outline", layerNr, slicer->layers[layerNr].z, slicer->layers[layerNr].polygonList);
-                sendPolygonsToGui("openoutline", layerNr, slicer->layers[layerNr].z, slicer->layers[layerNr].openPolygons);
+                //sendPolygonsToGui("outline", layerNr, slicer->layers[layerNr].z, slicer->layers[layerNr].polygonList, unoptimizedColoring);
+                sendPolygonsToGui("openoutline", layerNr, slicer->layers[layerNr].z, slicer->layers[layerNr].openPolygons, unoptimizedColoring);
             }
         }
         cura::log("Sliced model in %5.3fs\n", timeKeeper.restart());
@@ -253,7 +254,7 @@ private:
                     {
                         for (SliceIslandRegion &region : island.regions)
                         {
-                            sendPolygonsToGui("inset0", layerNr, layer.printZ, region.outline);
+                            sendPolygonsToGui("inset0", layerNr, layer.printZ, region.outline, region.coloring);
                         }
                     }
                 }
@@ -280,9 +281,9 @@ private:
                     {
                         if (region.insets.size() > 0)
                         {
-                            sendPolygonsToGui("inset0", layerNr, layer.printZ, region.insets[0]);
+                            sendPolygonsToGui("inset0", layerNr, layer.printZ, region.insets[0], region.coloring);
                             for(unsigned int inset=1; inset<region.insets.size(); inset++)
-                                sendPolygonsToGui("insetx", layerNr, layer.printZ, region.insets[inset]);
+                                sendPolygonsToGui("insetx", layerNr, layer.printZ, region.insets[inset], region.coloring);
                         }
                     }
                 }
@@ -329,7 +330,7 @@ private:
                     SliceLayer &layer = volume.layers[layerNr];
                     for(SliceLayerIsland &island : layer.islands)
                         for (SliceIslandRegion &region : island.regions)
-                            sendPolygonsToGui("skin", layerNr, layer.printZ, region.skinOutline);
+                            sendPolygonsToGui("skin", layerNr, layer.printZ, region.skinOutline, region.coloring);
                 }
             }
             cura::logProgress("skin",layerNr+1,totalLayers);
@@ -353,7 +354,7 @@ private:
             generateSkirt(storage, config.skirtDistance, config.layer0extrusionWidth, config.skirtLineCount, config.skirtMinLength, config.initialLayerThickness);
         generateRaft(storage, config.raftMargin);
 
-        sendPolygonsToGui("skirt", 0, config.initialLayerThickness, storage.skirt);
+        sendPolygonsToGui("skirt", 0, config.initialLayerThickness, storage.skirt, defaultColoring);
     }
 
     void writeGCode(SliceDataStorage& storage)
@@ -574,6 +575,7 @@ private:
                 {
                     for(unsigned int n=0; n<region.outline.size(); n++)
                     {
+                        //TODO: Figure out how to best handle colors here
                         for(unsigned int m=1; m<region.outline[n].size(); m++)
                         {
                             Polygon p;
@@ -603,8 +605,7 @@ private:
             }
             if (config.spiralizeMode)
                 inset0Config.spiralize = true;
-            
-            gcodeLayer.addPolygonsByOptimizer(strokes, &inset0Config);
+            gcodeLayer.addPolygonsByOptimizer(strokes, &inset0Config, unoptimizedColoring);
             return;
         }
 
@@ -651,7 +652,7 @@ private:
                 }
                 
                 Polygons skinPolygons;
-                for(Polygons outline : region.skinOutline.splitIntoParts())
+                for(Polygons &outline : region.skinOutline.splitIntoParts())
                 {
                     int bridge = -1;
                     if (layerNr > 0)
@@ -663,7 +664,7 @@ private:
                     gcodeLayer.setCombBoundary(nullptr);
                     gcodeLayer.setAlwaysRetract(true);
                 }
-                gcodeLayer.addPolygonsByOptimizer(skinPolygons, &skinConfig);
+                gcodeLayer.addPolygonsByOptimizer(skinPolygons, &skinConfig, region.coloring);
 
 
                 //After a layer part, make sure the nozzle is inside the comb boundary, so we do not retract on the perimeter.
@@ -710,7 +711,7 @@ private:
             }
         }
 
-        gcodeLayer.addPolygonsByOptimizer(infillPolygons, &infillConfig);
+        gcodeLayer.addPolygonsByOptimizer(infillPolygons, &infillConfig, part.coloring);
     }
 
     void addInsetToGCode(SliceIslandRegion& part, GCodePlanner& gcodeLayer, int layerNr)
@@ -722,14 +723,14 @@ private:
                 if (static_cast<int>(layerNr) >= config.downSkinCount)
                     inset0Config.spiralize = true;
                 if (static_cast<int>(layerNr) == config.downSkinCount && part.insets.size() > 0)
-                    gcodeLayer.addPolygonsByOptimizer(part.insets[0], &insetXConfig);
+                    gcodeLayer.addPolygonsByOptimizer(part.insets[0], &insetXConfig, part.coloring);
             }
             for(int insetNr=part.insets.size()-1; insetNr>-1; insetNr--)
             {
                 if (insetNr == 0)
-                    gcodeLayer.addPolygonsByOptimizer(part.insets[insetNr], &inset0Config);
+                    gcodeLayer.addPolygonsByOptimizer(part.insets[insetNr], &inset0Config, part.coloring);
                 else
-                    gcodeLayer.addPolygonsByOptimizer(part.insets[insetNr], &insetXConfig);
+                    gcodeLayer.addPolygonsByOptimizer(part.insets[insetNr], &insetXConfig, part.coloring);
             }
         }
     }

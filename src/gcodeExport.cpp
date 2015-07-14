@@ -11,7 +11,9 @@
 namespace cura {
 
 GCodeExport::GCodeExport()
-: currentPosition(0,0,0), startPosition(INT32_MIN,INT32_MIN,0), currentColor(nullptr)
+: currentColor(nullptr), currentPosition(0,0,0),
+  startPosition(INT32_MIN,INT32_MIN,0),
+  coloring(defaultColoring)
 {
     extrusionAmount = 0;
     extrusionPerMM = 0;
@@ -119,6 +121,11 @@ void GCodeExport::setRetractionSettings(int retractionAmount, int retractionSpee
     this->retractionZHop = zHop;
 }
 
+void GCodeExport::setColoring(const RegionColoring &coloring)
+{
+    this->coloring = coloring;
+}
+
 void GCodeExport::setZ(int z)
 {
     this->zPos = z;
@@ -215,14 +222,16 @@ void GCodeExport::writeMove(Point p, int speed, int lineWidth)
     if (currentPosition.x == p.X && currentPosition.y == p.Y && currentPosition.z == zPos)
         return;
 
-    Color* nextColor = reinterpret_cast<Color*>(p.Z);
-    if (nextColor != currentColor) {
-       if (nextColor) {
-            writeComment("COLOR_START %f %f %f", nextColor->r, nextColor->g, nextColor->b);
-        } else {
-            writeComment("COLOR_STOP");
+    if (lineWidth > 0) {
+        const Color* nextColor = coloring.getColor(p);
+        if (nextColor != currentColor) {
+           if (nextColor && nextColor != ColorCache::badColor) {
+                writeComment("COLOR_START %f %f %f", nextColor->r, nextColor->g, nextColor->b);
+            } else {
+                writeComment("COLOR_STOP");
+            }
+            currentColor = nextColor;
         }
-        currentColor = nextColor;
     }
 
     if (flavor == GCODE_FLAVOR_BFB)
@@ -437,12 +446,13 @@ void GCodeExport::finalize(int maxObjectHeight, int moveSpeed, const char* endCo
     }
 }
 
-GCodePath* GCodePlanner::getLatestPathWithConfig(GCodePathConfig* config)
+GCodePath* GCodePlanner::getLatestPathWithConfig(GCodePathConfig* config, const RegionColoring &coloring)
 {
-    if (paths.size() > 0 && paths[paths.size()-1].config == config && !paths[paths.size()-1].done)
-        return &paths[paths.size()-1];
-    paths.push_back(GCodePath());
-    GCodePath* ret = &paths[paths.size()-1];
+    if (paths.size() > 0 && !paths.back().done &&
+        paths.back().config == config && paths.back().coloring == coloring)
+        return &paths.back();
+    paths.emplace_back(coloring);
+    GCodePath* ret = &paths.back();
     ret->retract = false;
     ret->config = config;
     ret->extruder = currentExtruder;
@@ -507,9 +517,9 @@ void GCodePlanner::addTravel(Point p)
     lastPosition = p;
 }
 
-void GCodePlanner::addExtrusionMove(Point p, GCodePathConfig* config)
+void GCodePlanner::addExtrusionMove(Point p, GCodePathConfig* config, const RegionColoring &coloring)
 {
-    getLatestPathWithConfig(config)->points.push_back(p);
+    getLatestPathWithConfig(config, coloring)->points.push_back(p);
     lastPosition = p;
 }
 
@@ -530,21 +540,21 @@ void GCodePlanner::moveInsideCombBoundary(int distance)
     }
 }
 
-void GCodePlanner::addPolygon(PolygonRef polygon, int startIdx, GCodePathConfig* config)
+void GCodePlanner::addPolygon(PolygonRef polygon, int startIdx, GCodePathConfig* config, const RegionColoring &coloring)
 {
     Point p0 = polygon[startIdx];
     addTravel(p0);
     for(unsigned int i=1; i<polygon.size(); i++)
     {
         Point p1 = polygon[(startIdx + i) % polygon.size()];
-        addExtrusionMove(p1, config);
+        addExtrusionMove(p1, config, coloring);
         p0 = p1;
     }
     if (polygon.size() > 2)
-        addExtrusionMove(polygon[startIdx], config);
+        addExtrusionMove(polygon[startIdx], config, coloring);
 }
 
-void GCodePlanner::addPolygonsByOptimizer(Polygons& polygons, GCodePathConfig* config)
+void GCodePlanner::addPolygonsByOptimizer(Polygons& polygons, GCodePathConfig* config, const RegionColoring &coloring)
 {
     PathOrderOptimizer orderOptimizer(lastPosition);
     for(unsigned int i=0;i<polygons.size();i++)
@@ -553,7 +563,7 @@ void GCodePlanner::addPolygonsByOptimizer(Polygons& polygons, GCodePathConfig* c
     for(unsigned int i=0;i<orderOptimizer.polyOrder.size();i++)
     {
         int nr = orderOptimizer.polyOrder[i];
-        addPolygon(polygons[nr], orderOptimizer.polyStart[nr], config);
+        addPolygon(polygons[nr], orderOptimizer.polyStart[nr], config, coloring);
     }
 }
 
@@ -632,14 +642,17 @@ void GCodePlanner::writeGCode(bool liftHeadIfNeeded, int layerThickness)
         }
         int speed = path->config->speed;
         
-        if (path->config->lineWidth != 0)// Only apply the extrudeSpeedFactor to extrusion moves
+        if (path->config->lineWidth != 0) {// Only apply the extrudeSpeedFactor to extrusion moves
             speed = speed * extrudeSpeedFactor / 100;
-        else
+            gcode.setColoring(path->coloring);
+        } else {
             speed = speed * travelSpeedFactor / 100;
+        }
         
         if (path->points.size() == 1 && path->config != &travelConfig && shorterThen(gcode.getPositionXY() - path->points[0], path->config->lineWidth * 2))
         {
             //Check for lots of small moves and combine them into one large line
+            // TODO: This may throw away colors if srtUnoptimized.
             Point p0 = path->points[0];
             unsigned int i = n + 1;
             while(i < paths.size() && paths[i].points.size() == 1 && shorterThen(p0 - paths[i].points[0], path->config->lineWidth * 2))

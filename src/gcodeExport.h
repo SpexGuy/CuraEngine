@@ -6,6 +6,7 @@
 
 #include "settings.h"
 #include "comb.h"
+#include "sliceDataStorage.h"
 #include "utils/intpoint.h"
 #include "utils/polygon.h"
 #include "timeEstimate.h"
@@ -26,9 +27,10 @@ private:
     double extruderSwitchRetraction;
     double minimalExtrusionBeforeRetraction;
     double extrusionAmountAtPreviousRetraction;
-    Color* currentColor;
+    const Color *currentColor; // The color of the last extent
     Point3 currentPosition;
     Point3 startPosition;
+    RegionColoring coloring;
     Point extruderOffset[MAX_EXTRUDERS];
     char extruderCharacter[MAX_EXTRUDERS];
     int currentSpeed, retractionSpeed;
@@ -65,6 +67,8 @@ public:
     
     void setRetractionSettings(int retractionAmount, int retractionSpeed, int extruderSwitchRetraction, int minimalExtrusionBeforeRetraction, int zHop, int retractionAmountPrime);
     
+    void setColoring(const RegionColoring &coloring);
+
     void setZ(int z);
     
     Point getPositionXY();
@@ -76,6 +80,8 @@ public:
     int getPositionZ();
 
     int getExtruderNr();
+
+    const Color *getExtrusionColor(const Point &p);
     
     double getTotalFilamentUsed(int e);
 
@@ -129,11 +135,15 @@ public:
 class GCodePath
 {
 public:
+    GCodePath(const RegionColoring &coloring) : coloring(coloring) {}
     GCodePathConfig* config;
     bool retract;
+    RegionColoring coloring;
     int extruder;
     vector<Point> points;
     bool done;//Path is finished, no more moves should be added, and a new path should be started instead of any appending done to this one.
+private:
+    GCodePath();
 };
 
 //The GCodePlanner class stores multiple moves that are planned.
@@ -158,7 +168,7 @@ private:
     double extraTime;
     double totalPrintTime;
 private:
-    GCodePath* getLatestPathWithConfig(GCodePathConfig* config);
+    GCodePath* getLatestPathWithConfig(GCodePathConfig* config, const RegionColoring &coloring = defaultColoring);
     void forceNewPathStart();
 public:
     GCodePlanner(GCodeExport& gcode, int travelSpeed, int retractionMinimalDistance);
@@ -218,13 +228,13 @@ public:
     
     void addTravel(Point p);
     
-    void addExtrusionMove(Point p, GCodePathConfig* config);
+    void addExtrusionMove(Point p, GCodePathConfig* config, const RegionColoring &coloring = defaultColoring);
     
     void moveInsideCombBoundary(int distance);
 
-    void addPolygon(PolygonRef polygon, int startIdx, GCodePathConfig* config);
+    void addPolygon(PolygonRef polygon, int startIdx, GCodePathConfig* config, const RegionColoring &coloring = defaultColoring);
 
-    void addPolygonsByOptimizer(Polygons& polygons, GCodePathConfig* config);
+    void addPolygonsByOptimizer(Polygons& polygons, GCodePathConfig* config, const RegionColoring &coloring = defaultColoring);
     
     void forceMinimalLayerTime(double minTime, int minimalSpeed);
     

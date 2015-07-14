@@ -20,16 +20,48 @@ namespace cura {
 
 enum SliceRegionType { srtInfill, srtBorder, srtUnoptimized };
 
+class RegionColoring
+{
+public:
+    RegionColoring(SliceRegionType type, const Color *color) : type(type), color(color) {}
+
+    inline const Color *getColor(const Point &pt) const {
+        switch(type) {
+            case srtBorder:
+                return color;
+            case srtUnoptimized:
+                return reinterpret_cast<const Color *>(pt.Z);
+            case srtInfill: default:
+                return nullptr;
+        }
+    }
+
+    inline bool operator==(const RegionColoring &other) const {
+        if (other.type != type) return false;
+        return type != srtBorder || other.color == color;
+    }
+private:
+    SliceRegionType type;
+    const Color *color;
+    RegionColoring();
+};
+
+const RegionColoring defaultColoring(srtInfill, ColorCache::badColor);
+const RegionColoring unoptimizedColoring(srtUnoptimized, ColorCache::badColor);
+
 class SliceIslandRegion
 {
 public:
-    SliceRegionType type; //TODO: Use this
-    const Color *color; //TODO: Use this
+    SliceIslandRegion(const Polygons &outline, SliceRegionType type, const Color *color)
+      : coloring(type, color), outline(outline) {}
+    RegionColoring coloring;
     Polygons outline;
     Polygons combBoundary;
     vector<Polygons> insets;
     Polygons skinOutline;
     Polygons sparseOutline;
+private:
+    SliceIslandRegion();
 };
 
 class SliceLayerIsland

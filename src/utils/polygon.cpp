@@ -93,22 +93,14 @@ void Polygons::splitIntoColors(vector<SliceIslandRegion> &regions, int distance)
     }
     // TODO: Move this into makePolygons
     for (Paths &poly : known) {
-    	regions.emplace_back();
-    	SliceIslandRegion &region = regions.back();
-    	region.type = srtBorder;
-    	region.color = reinterpret_cast<const Color *>(poly[0][1].Z);
-    	region.outline = Polygons(poly);
+    	regions.emplace_back(Polygons(poly), srtBorder, reinterpret_cast<const Color *>(poly[0][1].Z));
     }
 
     // Add the infill areas to known
     // TODO: Offset with a polyTree for efficiency
     for (Polygons &polygons : Polygons(offset).splitIntoParts()) {
     	known.emplace_back(polygons.polygons);
-    	regions.emplace_back();
-    	SliceIslandRegion &region = regions.back();
-    	region.type = srtInfill;
-    	region.color = ColorCache::badColor;
-    	region.outline = polygons;
+    	regions.emplace_back(polygons, srtInfill, ColorCache::badColor);
     }
 
     // Last step: find the unoptimized parts which are neither infill nor colored edge.
@@ -126,13 +118,8 @@ void Polygons::splitIntoColors(vector<SliceIslandRegion> &regions, int distance)
    	// Finally, convert everything to Polygons and return
    	vector<Polygons> polys;
    	_processPolyTreeNode(&tree, polys); // split into parts in the result, since it may contain complex (multiple contour) polygons
-
    	for (Polygons &poly : polys) {
-    	regions.emplace_back();
-    	SliceIslandRegion &region = regions.back();
-    	region.type = srtUnoptimized;
-    	region.color = ColorCache::badColor;
-    	region.outline = Polygons(poly);
+    	regions.emplace_back(Polygons(poly), srtUnoptimized, ColorCache::badColor);
    	}
 }
 

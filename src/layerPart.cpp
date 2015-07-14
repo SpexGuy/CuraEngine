@@ -97,8 +97,10 @@ void dumpLayerparts(SliceDataStorage& storage, const char* filename)
                         PolygonRef p = region.outline[j];
                         for(unsigned int k=0;k<p.size();k++) {
                             //TODO: print regions, not just outlines
-                            const Color& color = *reinterpret_cast<const Color*>(p[k].Z);
-                            fprintf(out, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(color.r*255), int(color.g*255), int(color.b*255));
+                            const Color *color = region.coloring.getColor(p[k]);
+                            if (!color) color = ColorCache::badColor;
+                            // TODO: Handle bad colors better than this
+                            fprintf(out, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(color->r*255), int(color->g*255), int(color->b*255));
                             fprintf(out, "M %f,%f L %f,%f ", float(p[k].X - modelMin.x)/modelSize.x*500, float(p[k].Y - modelMin.y)/modelSize.y*500, float(p[(k+1) % p.size()].X - modelMin.x)/modelSize.x*500, float(p[(k+1) % p.size()].Y - modelMin.y)/modelSize.y*500);
                             fprintf(out, "\"/>");
                         }

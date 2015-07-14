@@ -129,6 +129,49 @@ void makePolygons(vector<SliceIslandRegion> &regions, vector<Paths> &known, cons
     } while(extentStart != firstIndex);
 }
 
+inline cInt processUnoptimizedPolygon(PolygonRef poly) {
+    const cInt badColor = reinterpret_cast<cInt>(ColorCache::badColor);
+    cInt firstColor = badColor;
+    bool multipleColors = false;
+    int prev = poly.size() - 1;
+    for (unsigned int c = 0; c < poly.size(); prev = c++) {
+        if (poly[c].Z == badColor) {
+            int next = (c+1) % poly.size();
+            if (poly[next].Z == badColor)
+                poly[c].Z = poly[prev].Z;
+            else
+                poly[c].Z = poly[next].Z;
+        } else {
+            if (firstColor == badColor)
+                firstColor = poly[c].Z;
+            else if (poly[c].Z != firstColor)
+                multipleColors = true;
+        }
+    }
+    if (multipleColors)
+        return badColor;
+    return firstColor;
+}
+
+inline void createUnoptimizedRegions(vector<SliceIslandRegion> &regions, Polygons &polys) {
+    const cInt badColor = reinterpret_cast<cInt>(ColorCache::badColor);
+    cInt firstColor = badColor;
+    bool multipleColors = false;
+    for (unsigned int c = 0; c < polys.size(); ++c) {
+        cInt newColor = processUnoptimizedPolygon(polys[c]);
+        if (newColor == badColor)
+            multipleColors = true;
+        else if (firstColor == badColor)
+            firstColor = newColor;
+        else if (firstColor != newColor)
+            multipleColors = true;
+    }
+    if (multipleColors)
+        regions.emplace_back(polys, srtUnoptimized, ColorCache::badColor);
+    else
+        regions.emplace_back(polys, srtBorder, reinterpret_cast<const Color *>(firstColor));
+}
+
 void Polygons::splitIntoColors(vector<SliceIslandRegion> &regions, int distance) const {
     // Set up a copy of the paths where the z value holds the indexes to the point
     Paths copyPaths = copyReplaceZ(polygons);
@@ -176,7 +219,7 @@ void Polygons::splitIntoColors(vector<SliceIslandRegion> &regions, int distance)
    	vector<Polygons> polys;
    	_processPolyTreeNode(&tree, polys); // split into parts in the result, since it may contain complex (multiple contour) polygons
    	for (Polygons &poly : polys) {
-    	regions.emplace_back(Polygons(poly), srtUnoptimized, ColorCache::badColor);
+        createUnoptimizedRegions(regions, poly);
    	}
 }
 

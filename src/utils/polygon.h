@@ -19,7 +19,7 @@ using std::vector;
 
 namespace cura {
 
-const static int clipper_init = (ClipperLib::ioPreserveCollinear);
+const static int clipper_init = (ClipperLib::ioPreserveCollinear | ClipperLib::ioStrictlySimple);
 #define NO_INDEX (std::numeric_limits<unsigned int>::max())
 
 class SliceIslandRegion;
@@ -218,7 +218,7 @@ class Polygons
 private:
     ClipperLib::Paths polygons;
 public:
-    unsigned int size()
+    unsigned int size() const
     {
         return polygons.size();
     }

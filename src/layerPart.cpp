@@ -3,6 +3,7 @@
 
 #include "layerPart.h"
 #include "settings.h"
+#include "utils/logoutput.h"
 #include "multiVolumes.h"
 
 /*
@@ -65,6 +66,7 @@ void createLayerParts(SliceVolumeStorage& storage, Slicer* slicer, int printZOff
 {
     for(unsigned int layerNr = 0; layerNr < slicer->layers.size(); layerNr++)
     {
+        cura::log("Generating layer %d:%d\n", layerNr+1, slicer->layers.size());
         storage.layers.push_back(SliceLayer());
         storage.layers[layerNr].sliceZ = slicer->layers[layerNr].z;
         storage.layers[layerNr].printZ = slicer->layers[layerNr].z + printZOffset;

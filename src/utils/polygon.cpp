@@ -1,9 +1,12 @@
 #include "polygon.h"
+#include "svg.h"
 #include "../sliceDataStorage.h"
 
 using namespace ClipperLib;
 
 namespace cura {
+
+#define DEBUG_MASK
 
 struct int2 {
     int2(int poly, int pt) : poly(poly), pt(pt) {}
@@ -67,7 +70,7 @@ inline int prev(const Path &offset, int index) {
     return index == 0 ? offset.size()-1 : index-1;
 }
 
-void makePolygons(vector<SliceIslandRegion> &regions, vector<Paths> &known, const Paths &outline, const Path &offset) {
+void makePolygons(vector<SliceIslandRegion> &regions, Paths &known, const Paths &outline, const Path &offset) {
     if (offset.size() < 2) return;
     // Find the first of this extent, inclusive
     int firstIndex = 0;
@@ -76,6 +79,10 @@ void makePolygons(vector<SliceIslandRegion> &regions, vector<Paths> &known, cons
         if (firstIndex == 0) break; // prevent infinite loop
     }
 
+    // Setup the mask for known regions
+    known.emplace_back();
+    Path &whole = known.back();
+    whole.reserve(3*offset.size()); // max length of the mask (if every point is discontinuous)
     // Iterate the extents of contiguous regions
     int extentStart = firstIndex;
     do {
@@ -87,10 +94,6 @@ void makePolygons(vector<SliceIslandRegion> &regions, vector<Paths> &known, cons
             extentLen++;
         } while(areAdjacent(outline, offset[prev(offset, extentEnd)], offset[extentEnd]) && extentEnd != extentStart);
 
-        // Setup the mask for known regions
-        known.emplace_back(1);
-        Path &whole = known.back()[0];
-        whole.reserve(2*(extentLen+1)); // outside and inside part, plus first and last edge
         whole << lookupPrev(outline, offset[extentStart]);
         whole.back().Z = toClipperInt(ColorCache::badColor);
 
@@ -99,7 +102,7 @@ void makePolygons(vector<SliceIslandRegion> &regions, vector<Paths> &known, cons
         do {
             //TODO: emplace_back first, then get poly to reference inside regions.back().outline
             Polygons polys;
-            PolygonRef poly = polys.newPoly(); // eww... should be Polygon&
+            PolygonRef poly = polys.newPoly();
 
             // TODO: Combine same colors
             poly.add(lookupPrev(outline, offset[extentCurr]));
@@ -113,15 +116,8 @@ void makePolygons(vector<SliceIslandRegion> &regions, vector<Paths> &known, cons
             extentCurr = next(offset, extentCurr);
         } while(extentCurr != extentEnd);
 
-        // Backtrack along the extent, adding the inside of the mask
-        do {
-            extentCurr = prev(offset, extentCurr);
-            whole << offset[extentCurr];
-            whole.back().Z = toClipperInt(ColorCache::badColor);
-        } while(extentCurr != extentStart);
-
         // Finish off the mask
-        whole << offset[prev(offset, extentStart)];
+        whole << offset[prev(offset, extentEnd)];
         whole.back().Z = toClipperInt(ColorCache::badColor);
 
         // Move on to the next extent
@@ -172,6 +168,10 @@ inline void createUnoptimizedRegions(vector<SliceIslandRegion> &regions, Polygon
         regions.emplace_back(polys, srtBorder, toColor(firstColor));
 }
 
+#ifdef DEBUG_MASK
+SVGBuilder maskSvg("mask.html");
+#endif
+
 void Polygons::splitIntoColors(vector<SliceIslandRegion> &regions, int distance) const {
     // Set up a copy of the paths where the z value holds the indexes to the point
     Paths copyPaths = copyReplaceZ(polygons);
@@ -189,38 +189,65 @@ void Polygons::splitIntoColors(vector<SliceIslandRegion> &regions, int distance)
     // So instead, if we can't find the associated polygon, we get a nonoptimized polygon.
     // For now.
 
-    vector<Paths> known; // The areas of the object to which color has been assigned
+    Paths known; // The areas of the object to which color has been assigned
 
     // Iterate the output, creating polygons of a single color from each path, and a mask in known
     for (const Path &path : offset) {
     	makePolygons(regions, known, polygons, path);
     }
 
-    // Add the infill areas to known
+#ifdef DEBUG_MASK
+    maskSvg.beginSVG(*this);
+    maskSvg.beginGroup();
+    for (Path &poly : known)
+        maskSvg.drawPolygon(PolygonRef(poly), unoptimizedColoring);
+    maskSvg.endGroup();
+#endif
+    // Add the infill areas to regions
     // TODO: Offset with a polyTree for efficiency
+#ifdef DEBUG_MASK
+    maskSvg.beginGroup();
+#endif
     for (Polygons &polygons : Polygons(offset).splitIntoParts()) {
-    	known.emplace_back(polygons.polygons); // these areas should be completely covered by makePolygons, so setting their z values is unnecessary.
-    	regions.emplace_back(polygons, srtInfill, ColorCache::badColor);
+#ifdef DEBUG_MASK
+        maskSvg.drawPolygons(polygons, defaultColoring);
+#endif
+        // The infill areas are already in known from makePolygons
+        regions.emplace_back(polygons, srtInfill, ColorCache::badColor);
     }
+#ifdef DEBUG_MASK
+    maskSvg.endGroup();
+    maskSvg.endSVG();
+#endif
 
     // Last step: find the unoptimized parts which are neither infill nor colored edge.
     // These areas occur when the shape pinches to a width of less than twice the given distance, and the offset gets clipped
     // Find them by subtracting all the known parts from the original polygons
     PolyTree tree;
-   	Clipper unknownFinder(clipper_init);
-   	unknownFinder.Callback(&colorFill);
-   	unknownFinder.AddPaths(polygons, ptSubject, true);
-   	for (Paths &p : known) {
-   		unknownFinder.AddPaths(p, ptClip, true);
-   	}
-   	unknownFinder.Execute(ctDifference, tree);
+    Clipper unknownFinder(clipper_init);
+    unknownFinder.Callback(&colorFill);
+    unknownFinder.AddPaths(polygons, ptSubject, true);
+	unknownFinder.AddPaths(known, ptClip, true);
+    unknownFinder.Execute(ctDifference, tree);
 
    	// Finally, convert everything to Polygons and return
    	vector<Polygons> polys;
    	_processPolyTreeNode(&tree, polys); // split into parts in the result, since it may contain complex (multiple contour) polygons
-   	for (Polygons &poly : polys) {
+#ifdef DEBUG_MASK
+    maskSvg.beginSVG(*this);
+#endif
+    for (Polygons &poly : polys) {
+#ifdef DEBUG_MASK
+        maskSvg.beginGroup();
+        maskSvg.drawPolygons(poly, unoptimizedColoring);
+        maskSvg.endGroup();
+#endif
         createUnoptimizedRegions(regions, poly);
-   	}
+    }
+#ifdef DEBUG_MASK
+    maskSvg.endSVG();
+    maskSvg.write("<hr />");
+#endif
 }
 
 }

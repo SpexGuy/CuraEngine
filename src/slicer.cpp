@@ -367,8 +367,8 @@ Slicer::Slicer(OptimizedVolume* ov, int32_t initial, int32_t thickness, bool kee
             s.addedToPolygon = false;
 
             // Copy color from optimized face to the segment points
-            s.start.Z = reinterpret_cast<ClipperLib::cInt>(ov->faces[i].color);
-            s.end.Z = reinterpret_cast<ClipperLib::cInt>(ov->faces[i].color);
+            s.start.Z = toClipperInt(ov->faces[i].color);
+            s.end.Z = toClipperInt(ov->faces[i].color);
             layers[layerNr].segmentList.push_back(s);
         }
     }
@@ -397,7 +397,7 @@ void Slicer::dumpNonPolySegsToHtml(const char* filename)
         for(unsigned int j=0; j<layers[i].segmentList.size(); j++)
         {
             SlicerSegment segment = layers[i].segmentList[j];
-            const Color& color = *reinterpret_cast<Color*>(segment.start.Z);
+            const Color& color = *toColor(segment.start.Z);
             fprintf(f, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(color.r*255), int(color.g*255), int(color.b*255));
             fprintf(f, "M %f,%f L %f,%f ", float(segment.start.X - modelMin.x)/scale, float(segment.start.Y - modelMin.y)/scale, float(segment.end.X - modelMin.x)/scale, float(segment.end.Y - modelMin.y)/scale);
             fprintf(f, "\"/>");
@@ -427,7 +427,7 @@ void Slicer::dumpSegmentsToHTML(const char* filename)
             PolygonRef p = layers[i].polygonList[j];
             for(unsigned int n=0; n<p.size(); n++)
             {
-                const Color& color = *reinterpret_cast<const Color*>(p[n].Z);
+                const Color& color = *toColor(p[n].Z);
                 fprintf(f, "<path marker-mid='url(#MidMarker)' stroke=\"#%02x%02x%02x\" d=\"", int(color.r*255), int(color.g*255), int(color.b*255));
                 fprintf(f, "M %f,%f L %f,%f ", float(p[n].X - modelMin.x)/scale, float(p[n].Y - modelMin.y)/scale, float(p[(n+1) % p.size()].X - modelMin.x)/scale, float(p[(n+1) % p.size()].Y - modelMin.y)/scale);
                 fprintf(f, "\"/>");

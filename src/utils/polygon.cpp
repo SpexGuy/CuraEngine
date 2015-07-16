@@ -92,7 +92,7 @@ void makePolygons(vector<SliceIslandRegion> &regions, vector<Paths> &known, cons
         Path &whole = known.back()[0];
         whole.reserve(2*(extentLen+1)); // outside and inside part, plus first and last edge
         whole << lookupPrev(outline, offset[extentStart]);
-        whole.back().Z = reinterpret_cast<cInt>(ColorCache::badColor);
+        whole.back().Z = toClipperInt(ColorCache::badColor);
 
         // Build polygons along the extent
         int extentCurr = extentStart;
@@ -108,7 +108,7 @@ void makePolygons(vector<SliceIslandRegion> &regions, vector<Paths> &known, cons
             poly.add(offset[prev(offset, extentCurr)]);
 
             whole << poly[1];
-            regions.emplace_back(polys, srtBorder, reinterpret_cast<const Color *>(poly[1].Z));
+            regions.emplace_back(polys, srtBorder, toColor(poly[1].Z));
 
             extentCurr = next(offset, extentCurr);
         } while(extentCurr != extentEnd);
@@ -117,12 +117,12 @@ void makePolygons(vector<SliceIslandRegion> &regions, vector<Paths> &known, cons
         do {
             extentCurr = prev(offset, extentCurr);
             whole << offset[extentCurr];
-            whole.back().Z = reinterpret_cast<cInt>(ColorCache::badColor);
+            whole.back().Z = toClipperInt(ColorCache::badColor);
         } while(extentCurr != extentStart);
 
         // Finish off the mask
         whole << offset[prev(offset, extentStart)];
-        whole.back().Z = reinterpret_cast<cInt>(ColorCache::badColor);
+        whole.back().Z = toClipperInt(ColorCache::badColor);
 
         // Move on to the next extent
         extentStart = extentEnd;
@@ -130,7 +130,7 @@ void makePolygons(vector<SliceIslandRegion> &regions, vector<Paths> &known, cons
 }
 
 inline cInt processUnoptimizedPolygon(PolygonRef poly) {
-    const cInt badColor = reinterpret_cast<cInt>(ColorCache::badColor);
+    const cInt badColor = toClipperInt(ColorCache::badColor);
     cInt firstColor = badColor;
     bool multipleColors = false;
     int prev = poly.size() - 1;
@@ -154,7 +154,7 @@ inline cInt processUnoptimizedPolygon(PolygonRef poly) {
 }
 
 inline void createUnoptimizedRegions(vector<SliceIslandRegion> &regions, Polygons &polys) {
-    const cInt badColor = reinterpret_cast<cInt>(ColorCache::badColor);
+    const cInt badColor = toClipperInt(ColorCache::badColor);
     cInt firstColor = badColor;
     bool multipleColors = false;
     for (unsigned int c = 0; c < polys.size(); ++c) {
@@ -169,7 +169,7 @@ inline void createUnoptimizedRegions(vector<SliceIslandRegion> &regions, Polygon
     if (multipleColors)
         regions.emplace_back(polys, srtUnoptimized, ColorCache::badColor);
     else
-        regions.emplace_back(polys, srtBorder, reinterpret_cast<const Color *>(firstColor));
+        regions.emplace_back(polys, srtBorder, toColor(firstColor));
 }
 
 void Polygons::splitIntoColors(vector<SliceIslandRegion> &regions, int distance) const {

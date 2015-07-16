@@ -3,6 +3,7 @@
 #define COLOR_H
 
 #include <set>
+#include <sstream>
 #include <clipper/clipper.hpp>
 
 namespace cura {
@@ -23,6 +24,26 @@ private:
 
     friend class ColorCache;
 };
+
+
+static inline const Color *toColor(const ClipperLib::cInt &value) {
+    return reinterpret_cast<const Color *>(value);
+}
+static inline ClipperLib::cInt toClipperInt(const Color *color) {
+    return reinterpret_cast<ClipperLib::cInt>(color);
+}
+
+// TODO: This goes somewhere else
+template<typename T>
+std::string toString(const T &value) {
+    std::stringstream sstr;
+    sstr << value;
+    return sstr.str();
+}
+
+static inline std::ostream &operator<<(std::ostream &out, const Color &color) {
+    return out << "Color(" << color.r << ", " << color.g << ", " << color.b << ")";
+}
 
 
 enum SliceRegionType { srtInfill, srtBorder, srtUnoptimized };

@@ -53,9 +53,6 @@ private:
     const ColorIterator createColor(const Color &c);
 };
 
-void flatColorCallback(ClipperLib::IntPoint& z1, ClipperLib::IntPoint& z2, ClipperLib::IntPoint& pt);
-void flatColorOffsetCallback(int step, int steps, ClipperLib::IntPoint& source, ClipperLib::IntPoint& dest);
-
 }//namespace cura
 
 #endif//COLOR_H

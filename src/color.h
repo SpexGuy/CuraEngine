@@ -24,6 +24,39 @@ private:
     friend class ColorCache;
 };
 
+
+enum SliceRegionType { srtInfill, srtBorder, srtUnoptimized };
+
+class RegionColoring
+{
+public:
+    RegionColoring(SliceRegionType type, const Color *color) : type(type), color(color) {}
+
+    inline const Color *getColor(const ClipperLib::IntPoint &pt) const {
+        switch(type) {
+            case srtBorder:
+                return color;
+            case srtUnoptimized:
+                return toColor(pt.Z);
+            case srtInfill: default:
+                return nullptr;
+        }
+    }
+
+    inline bool isInfill() {
+        return type == srtInfill;
+    }
+
+    inline bool operator==(const RegionColoring &other) const {
+        if (other.type != type) return false;
+        return type != srtBorder || other.color == color;
+    }
+private:
+    SliceRegionType type;
+    const Color *color;
+    RegionColoring();
+};
+
 struct ColorComparator {
     bool operator() (const Color& self, const Color& other) {
         if (self.r != other.r)
@@ -53,6 +86,8 @@ private:
     const ColorIterator createColor(const Color &c);
 };
 
+const RegionColoring defaultColoring(srtInfill, ColorCache::badColor);
+const RegionColoring unoptimizedColoring(srtUnoptimized, ColorCache::badColor);
 }//namespace cura
 
 #endif//COLOR_H
